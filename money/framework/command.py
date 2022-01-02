@@ -37,12 +37,12 @@ class CommandMeta(schema.SchemaMeta, ABCMeta):
 
     @staticmethod
     def _validate_exec(the_cls: type):
-        fetch = getattr(the_cls, "exec", None)
-        if fetch is None:
+        exec = getattr(the_cls, "exec", None)
+        if exec is None:
             raise CommandDefinitionError(
                 the_cls.__name__, "exec method must be defined"
             )
-        if not callable(fetch):
+        if not callable(exec):
             raise CommandDefinitionError(the_cls.__name__, f"exec must be callable")
 
 
