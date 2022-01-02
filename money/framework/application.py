@@ -2,11 +2,10 @@ from inspect import isawaitable
 import json
 import logging
 import asyncio
-from typing import Any, Dict, List, Set, Type, TypeVar, Union
+from typing import Any, Dict, List, Type, TypeVar, Union
 
 import graphene
 import aiohttp.web as web
-from graphene.types.scalars import Scalar
 
 
 import money.framework.schema as schema
@@ -134,8 +133,9 @@ class GraphQLApplication(Application):
                 {name: field_to_graphql(field) for name, field in schema.items()},
             )
 
-        def query_to_graphql(query: QueryMeta) -> Type[graphene.ObjectType]:
-            query_name = f"Gql{query.__name__}Query"
+        def query_to_graphql(
+            query_name: str, query: QueryMeta
+        ) -> Type[graphene.ObjectType]:
             query_attrs: Dict[str, Any] = {
                 name: field_to_graphql(field)
                 for name, field in query.Result.__schema__.items()
@@ -220,10 +220,11 @@ class GraphQLApplication(Application):
 
             attrs = {}
             for query in self._queries:
-                gql_obj = query_to_graphql(query)
+                query_name = f"Gql{query.__name__}Query"
+                gql_obj = query_to_graphql(query_name, query)
                 resolver_name = f"resolve_{gql_obj.__name__}"
                 resolver_fn, resolver_arg = gen_resolver(resolver_name, query)
-                attrs[gql_obj.__name__] = graphene.Field(
+                attrs[query_name] = graphene.Field(
                     gql_obj, **(resolver_arg if resolver_arg else {})
                 )
                 attrs[resolver_name] = resolver_fn

@@ -33,7 +33,6 @@ class AggregateMeta(schema.SchemaMeta, ABCMeta):
         return x
 
     def __init__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
-        print(f"{name}: is mixin? {cls.__agg_mixin__}")
         if not cls.__agg_mixin__:
             AggregateMeta._validate_aggregate_id(cls)
             AggregateMeta._validate_creation_event(cls)
