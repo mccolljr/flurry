@@ -1,0 +1,16 @@
+# https://taskfile.dev
+
+version: "3"
+
+tasks:
+  install:
+    - 'if [ -z "$(which poetry)" ]; then pip install -r requirements.txt; fi'
+    - "poetry install"
+
+  start:api:
+    - python -m money
+
+  start:web:
+    dir: site
+    cmds:
+      - yarn serve

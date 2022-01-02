@@ -1,0 +1,11 @@
+# editor files
+**/.vscode/
+
+# python environments & artifacts
+**/.venv/
+**/__pycache__/
+
+# node & node_modules
+**/node_modules/
+**/build
+**/*.log
