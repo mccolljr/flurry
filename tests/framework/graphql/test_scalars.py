@@ -55,8 +55,6 @@ def test_predicate_scalar_serde(have, want):
     serialized = PredicateScalar.serialize(have)
     assert serialized == want
     deserialized = PredicateScalar.parse_literal(gqlparse.parse_value(want))
-    print("des=", deserialized)
-    print("hav=", have)
     assert deserialized == have
 
 

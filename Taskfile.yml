@@ -3,9 +3,33 @@
 version: "3"
 
 tasks:
-  install:
+  default:
+    - task: install
+    - task: test
+
+  install:api:
     - 'if [ -z "$(which poetry)" ]; then pip install -r requirements.txt; fi'
     - "poetry install"
+
+  install:site:
+    dir: site
+    cmds:
+      - yarn install
+
+  install:
+    - task: install:api
+    - task: install:site
+
+  test:api:
+    - pytest -s
+    - mypy
+
+  test:site:
+    - echo "no tests"
+
+  test:
+    - task: test:api
+    - task: test:site
 
   start:api:
     - python -m money
