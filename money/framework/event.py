@@ -36,7 +36,7 @@ class EventHandler(Generic[E]):
         self._evt_class = evt_class
 
     def __set_name__(self, owner: Any, name: str):
-        owner.__agg_events__.append(self._evt_class)
+        owner.__agg_events__[self._evt_class] = name
 
     @overload
     def __get__(self, obj: None, objtype: Any) -> "EventHandler[E]":

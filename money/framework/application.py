@@ -1,3 +1,4 @@
+from inspect import isawaitable
 import json
 import logging
 import asyncio
@@ -13,6 +14,7 @@ from money.framework.aggregate import AggregateMeta
 from money.framework.command import CommandMeta
 from money.framework.event import EventMeta
 from money.framework.query import QueryMeta
+from money.framework.storage import Storage
 
 TEvtMeta = TypeVar("TEvtMeta", bound=EventMeta)
 TQryMeta = TypeVar("TQryMeta", bound=QueryMeta)
@@ -59,8 +61,9 @@ class Application:
 
 
 class GraphQLApplication(Application):
-    def __init__(self):
+    def __init__(self, storage: Storage):
         super().__init__()
+        self.storage = storage
 
     @property
     def gql_schema(self) -> graphene.Schema:
@@ -143,25 +146,38 @@ class GraphQLApplication(Application):
             return schema_to_graphql(f"Gql{agg.__name__}Object", agg.__schema__)
 
         def cmd_to_graphql(cmd: CommandMeta) -> graphene.Field:
-            Arguments = type(
-                "Arguments",
-                (),
-                {name: arg_to_graphql(field) for name, field in cmd.__schema__.items()},
-            )
-
             Mutation: Type[graphene.Mutation]
+            custom_results = getattr(cmd, "Result", None) is not None
+            result_fields = (
+                {
+                    name: field_to_graphql(field)
+                    for name, field in cmd.Result.__schema__.items()
+                }
+                if hasattr(cmd, "Result") and cmd.Result
+                else {"ok": graphene.Boolean(required=True)}
+            )
+            arg_fields = {
+                name: arg_to_graphql(field) for name, field in cmd.__schema__.items()
+            }
+            Arguments = type("Arguments", (), arg_fields)
 
-            def mutate(root, info, **kwargs):
+            async def mutate(parent: Any, info: graphene.ResolveInfo, **args):
+                cmd_inst = cmd(**args)
+                result = cmd_inst.exec(storage=self.storage)
+                if info.is_awaitable(result):
+                    result = await result
+                if custom_results:
+                    return Mutation(**result.to_dict())
                 return Mutation(ok=True)
 
             Mutation = type(
                 f"Gql{cmd.__name__}Mutation",
                 (graphene.Mutation,),
-                {
-                    "Arguments": Arguments,
-                    "mutate": mutate,
-                    "ok": graphene.Boolean(required=True),
-                },
+                dict(
+                    Arguments=Arguments,
+                    mutate=mutate,
+                    **result_fields,
+                ),
             )
             return Mutation.Field()
 
@@ -189,12 +205,14 @@ class GraphQLApplication(Application):
                         for name, field in query_argtyp.__schema__.items()
                     }
 
-                def resolver_fn(parent: Any, info: graphene.ResolveInfo, **args):
+                async def resolver_fn(parent: Any, info: graphene.ResolveInfo, **args):
                     q = query_typ()
                     if query_argtyp is not None:
-                        result = q.fetch(query_argtyp(**args))
+                        result = q.fetch(self.storage, query_argtyp(**args))
                     else:
-                        result = q.fetch()
+                        result = q.fetch(self.storage)
+                    if isawaitable(result):
+                        result = await result
                     return result
 
                 resolver_fn.__name__ = name

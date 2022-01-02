@@ -1,17 +1,20 @@
+from __future__ import annotations
+
 import os
-import asyncio
+import uuid
 import logging
-from typing import Any
-from money.framework.predicate import Predicate
+from typing import Dict, List
 
 import money.framework.schema as schema
+import money.framework.predicate as P
 from money.framework.application import GraphQLApplication
 from money.framework.aggregate import AggregateBase
 from money.framework.command import CommandBase
-from money.framework.query import QueryArguments, QueryBase, QueryResult
+from money.framework.query import QueryBase
 from money.framework.event import EventBase, handle_event
+from money.framework.storage import MemoryStorage, Storage
 
-app = GraphQLApplication()
+app = GraphQLApplication(storage=MemoryStorage())
 
 
 class TodoEvent(EventBase):
@@ -26,14 +29,13 @@ class TodoCreatedEvent(TodoEvent):
 
 @app.event
 class TodoModifiedEvent(TodoEvent):
-    todo_id = schema.Field(schema.Str, nullable=False)
     title = schema.Field(schema.Str)
     description = schema.Field(schema.Str)
 
 
 @app.event
 class TodoCompletedEvent(TodoEvent):
-    todo_id = schema.Field(schema.Str, nullable=False)
+    pass
 
 
 @app.aggregate
@@ -47,6 +49,7 @@ class TodoAggregate(AggregateBase):
 
     @handle_event(TodoCreatedEvent)
     def handle_created(self, evt: TodoCreatedEvent):
+        self.id = evt.todo_id
         self.title = evt.title
         self.description = evt.description
 
@@ -61,11 +64,36 @@ class TodoAggregate(AggregateBase):
     def handle_completed(self, evt: TodoCompletedEvent):
         self.completed = True
 
+    @classmethod
+    async def load_events(
+        cls, storage: Storage, ids: List[str]
+    ) -> Dict[str, List[TodoEvent]]:
+        loaded = await storage.load_events(P.Or(*(P.Where(todo_id=id) for id in ids)))
+        events = {}
+        for evt in loaded:
+            assert isinstance(evt, TodoEvent)
+            events.setdefault(evt.todo_id, []).append(evt)
+        return events
+
 
 @app.command
 class CreateTodo(CommandBase):
+    class Result(schema.SimpleSchema):
+        created = schema.Field(schema.Object(TodoAggregate), nullable=False)
+
     title = schema.Field(schema.Str, nullable=False)
     description = schema.Field(schema.Str, nullable=False)
+
+    async def exec(self, storage: Storage) -> Result:
+        id = str(uuid.uuid4())
+        await storage.save_events(
+            [
+                TodoCreatedEvent(
+                    todo_id=id, title=self.title, description=self.description
+                )
+            ]
+        )
+        return self.Result(created=await TodoAggregate.load(storage, id))
 
 
 @app.command
@@ -74,49 +102,72 @@ class ModifyTodo(CommandBase):
     title = schema.Field(schema.Str)
     description = schema.Field(schema.Str)
 
+    async def exec(self, storage: Storage):
+        existing = await TodoAggregate.load(storage, self.todo_id)
+        if (self.title is not None and existing.title != self.title) or (
+            self.description is not None and existing.description != self.description
+        ):
+            await storage.save_events(
+                [
+                    TodoModifiedEvent(
+                        todo_id=existing.id,
+                        title=self.title,
+                        description=self.description,
+                    )
+                ]
+            )
+
 
 @app.command
 class CompleteTodo(CommandBase):
     todo_id = schema.Field(schema.Str, nullable=False)
 
+    async def exec(self, storage: Storage):
+        existing = await TodoAggregate.load(storage, self.todo_id)
+        if not existing.completed:
+            await storage.save_events([TodoCompletedEvent(todo_id=existing.id)])
+
 
 @app.query
 class CountTodos(QueryBase):
-    class Result(QueryResult):
+    class Result(schema.SimpleSchema):
         count = schema.Field(schema.Int, nullable=False)
 
-    def fetch(self):
-        future = asyncio.Future()
-        asyncio.get_event_loop().call_later(
-            2, lambda: future.set_result(self.Result(count=100))
-        )
-        return future
+    async def fetch(self, storage: Storage) -> Result:
+        creation_events = list(await storage.load_events(P.Is(TodoCreatedEvent)))
+        return self.Result(count=len(creation_events))
 
 
 @app.query
 class FindTodo(QueryBase):
     Result = TodoAggregate
 
-    class Arguments(QueryArguments):
+    class Arguments(schema.SimpleSchema):
         id = schema.Field(schema.Str, nullable=False)
 
-    async def fetch(self, args: Arguments):
-        return TodoAggregate(id=args.id)
+    async def fetch(self, storage: Storage, args: Arguments) -> Result:
+        return await TodoAggregate.load(storage, args.id)
 
 
 @app.query
 class ListTodos(QueryBase):
-    class Result(QueryResult):
+    class Result(schema.SimpleSchema):
         todos = schema.Field(
             schema.Collection(schema.Object(TodoAggregate)), nullable=False
         )
 
-    class Arguments(QueryArguments):
+    class Arguments(schema.SimpleSchema):
         updated_before = schema.Field(schema.DateTime)
         updated_after = schema.Field(schema.DateTime)
 
-    async def fetch(self, args: Arguments):
-        return []
+    async def fetch(self, storage: Storage, args: Arguments) -> Result:
+        all_events = await storage.load_events(P.Is(TodoEvent))
+        agg_events = {}
+        for e in all_events:
+            assert isinstance(e, TodoEvent)
+            agg_events.setdefault(e.todo_id, []).append(e)
+        todos = [TodoAggregate.from_events(evts) for evts in agg_events.values()]
+        return self.Result(todos=todos)
 
 
 def main():

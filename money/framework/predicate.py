@@ -91,8 +91,11 @@ class Is(Predicate[T]):
 class Where(Predicate[T]):
     __slots__ = ("fields",)
 
-    def __init__(self, **fields: FieldPredicate):
-        self.fields = fields
+    def __init__(self, **fields: Union[FieldPredicate, Any]):
+        self.fields = {
+            field: pred if isinstance(pred, FieldPredicate) else Eq(pred)
+            for field, pred in fields.items()
+        }
 
     def __call__(self, item: T) -> bool:
         return all(

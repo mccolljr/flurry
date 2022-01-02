@@ -1,8 +1,10 @@
 from __future__ import annotations
+from abc import ABCMeta, abstractmethod
 
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import money.framework.schema as schema
+from money.framework.storage import Storage
 
 
 class QueryDefinitionError(Exception):
@@ -12,21 +14,22 @@ class QueryDefinitionError(Exception):
         super().__init__(f"{self.query_name}: {self.problem}")
 
 
-class QueryMeta(type):
+class QueryMeta(ABCMeta):
+    __query_mixin__: bool
     Result: schema.SchemaMeta
     Arguments: Optional[schema.SchemaMeta]
     fetch: Callable[[QueryBase, Any], Any]
 
     def __new__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
+        attrs.setdefault("__query_mixin__", False)
         x = super().__new__(cls, name, bases, attrs)
         return x
 
     def __init__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
-        if cls.__name__ == "QueryBase":
-            return
-        QueryMeta._validate_fetch(cls)
-        QueryMeta._validate_result(cls)
-        QueryMeta._validate_arguments(cls)
+        if not cls.__query_mixin__:
+            QueryMeta._validate_fetch(cls)
+            QueryMeta._validate_result(cls)
+            QueryMeta._validate_arguments(cls)
 
     @staticmethod
     def _validate_result(the_cls: type):
@@ -58,13 +61,11 @@ class QueryMeta(type):
 
 
 class QueryBase(metaclass=QueryMeta):
+    __query_mixin__ = True
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-
-class QueryResult(schema.SchemaBase, metaclass=schema.SchemaMeta):
-    pass
-
-
-class QueryArguments(schema.SchemaBase, metaclass=schema.SchemaMeta):
-    pass
+    @abstractmethod
+    async def fetch(self, storage: Storage, args=None) -> Any:
+        ...

@@ -45,7 +45,7 @@ type GqlMutations {
 }
 
 type GqlCreateTodoMutation {
-  ok: Boolean!
+  created: GqlTodoAggregateObject!
 }
 
 type GqlModifyTodoMutation {
