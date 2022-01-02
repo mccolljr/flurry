@@ -1,5 +1,6 @@
+from __future__ import annotations
 from abc import ABCMeta, abstractmethod
-from typing import Any, ClassVar, Dict, Iterable, List, Mapping, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Mapping, Tuple, Type, TypeVar
 
 import money.framework.schema as schema
 from money.framework.event import EventBase, EventMeta
@@ -32,20 +33,41 @@ class AggregateMeta(schema.SchemaMeta, ABCMeta):
         return x
 
     def __init__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
-        if cls.__agg_mixin__:
-            return
-        if not hasattr(cls, "__agg_create__"):
+        print(f"{name}: is mixin? {cls.__agg_mixin__}")
+        if not cls.__agg_mixin__:
+            AggregateMeta._validate_aggregate_id(cls)
+            AggregateMeta._validate_creation_event(cls)
+            AggregateMeta._validate_load_events_method(cls)
+
+    @staticmethod
+    def _validate_aggregate_id(the_cls: AggregateMeta):
+        if not (the_cls.__agg_id__ and the_cls.__agg_id__ in the_cls.__schema__):
             raise AggregateDefinitionError(
-                name, "must specify a creation event in __agg_create__"
+                the_cls.__name__, "must define an id field, or must specify __agg_id__"
             )
-        if cls.__agg_create__ not in cls.__agg_events__:
+
+    @staticmethod
+    def _validate_creation_event(the_cls: AggregateMeta):
+        if not hasattr(the_cls, "__agg_create__"):
             raise AggregateDefinitionError(
-                name,
-                f"must specify a handler for creation event {cls.__agg_create__.__name__}",
+                the_cls.__name__, "must specify a creation event in __agg_create__"
             )
-        if not (cls.__agg_id__ and cls.__agg_id__ in cls.__schema__):
+        if the_cls.__agg_create__ not in the_cls.__agg_events__:
             raise AggregateDefinitionError(
-                name, "must define an id field, or must specify __agg_id__"
+                the_cls.__name__,
+                f"must specify a handler for creation event {the_cls.__agg_create__.__name__}",
+            )
+
+    @staticmethod
+    def _validate_load_events_method(the_cls: AggregateMeta):
+        load_events = getattr(the_cls, "load_events", None)
+        if load_events is None or getattr(load_events, "__isabstractmethod__", False):
+            raise AggregateDefinitionError(
+                the_cls.__name__, "must define a load_events class method"
+            )
+        if not callable(load_events):
+            raise AggregateDefinitionError(
+                the_cls.__name__, "the load_events method must be callable"
             )
 
 

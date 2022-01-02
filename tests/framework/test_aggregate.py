@@ -41,6 +41,21 @@ def test_agg_def_missing_id_fail():
             pass
 
 
+@pytest.mark.xfail(raises=AggregateDefinitionError, strict=True)
+def test_agg_def_missing_load_events_fail():
+    class CreationEvent(EventBase):
+        pass
+
+    class NoLoadAggregate(AggregateBase):
+        __agg_create__ = CreationEvent
+
+        id = schema.Field(schema.Str)
+
+        @handle_event(CreationEvent)
+        def handle_created(self, e: CreationEvent):
+            pass
+
+
 def test_agg_def_trivial():
     class CreationEvent(EventBase):
         pass
@@ -54,6 +69,10 @@ def test_agg_def_trivial():
         def handle_created(self, e: CreationEvent):
             pass
 
+        @classmethod
+        def load_events(cls):
+            return []
+
     assert TrivialAggregate.__schema__ == {
         "id": TrivialAggregate.id,
     }
@@ -61,7 +80,7 @@ def test_agg_def_trivial():
     assert TrivialAggregate.__agg_name__ == "TrivialAggregate"
     assert TrivialAggregate.__agg_mixin__ == False
     assert TrivialAggregate.__agg_create__ == CreationEvent
-    assert TrivialAggregate.__agg_events__ == [CreationEvent]
+    assert TrivialAggregate.__agg_events__ == {CreationEvent: "handle_created"}
     assert isinstance(TrivialAggregate.handle_created, EventHandler)
 
 
@@ -79,6 +98,10 @@ def test_agg_def_custom_id():
         def handle_created(self, e: CreationEvent):
             pass
 
+        @classmethod
+        def load_events(cls):
+            return []
+
     assert TrivialAggregate.__schema__ == {
         "unique_id": TrivialAggregate.unique_id,
     }
@@ -86,7 +109,7 @@ def test_agg_def_custom_id():
     assert TrivialAggregate.__agg_name__ == "TrivialAggregate"
     assert TrivialAggregate.__agg_mixin__ == False
     assert TrivialAggregate.__agg_create__ == CreationEvent
-    assert TrivialAggregate.__agg_events__ == [CreationEvent]
+    assert TrivialAggregate.__agg_events__ == {CreationEvent: "handle_created"}
     assert isinstance(TrivialAggregate.handle_created, EventHandler)
 
 
@@ -111,6 +134,10 @@ def test_agg_def_two_events():
         def handle_updated(self, e: UpdateEvent):
             self.val = e.val
 
+        @classmethod
+        def load_events(cls):
+            return []
+
     assert TwoEventAggregate.__schema__ == {
         "id": TwoEventAggregate.id,
         "val": TwoEventAggregate.val,
@@ -119,7 +146,10 @@ def test_agg_def_two_events():
     assert TwoEventAggregate.__agg_name__ == "TwoEventAggregate"
     assert TwoEventAggregate.__agg_mixin__ == False
     assert TwoEventAggregate.__agg_create__ == CreationEvent
-    assert TwoEventAggregate.__agg_events__ == [CreationEvent, UpdateEvent]
+    assert TwoEventAggregate.__agg_events__ == {
+        CreationEvent: "handle_created",
+        UpdateEvent: "handle_updated",
+    }
     assert isinstance(TwoEventAggregate.handle_created, EventHandler)
     assert isinstance(TwoEventAggregate.handle_updated, EventHandler)
 

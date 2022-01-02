@@ -21,6 +21,9 @@ def test_application():
         title = schema.Field(schema.Str)
         description = schema.Field(schema.Str)
 
+        def exec(self):
+            pass
+
     @app.aggregate
     class TodoAggregate(AggregateBase):
         __agg_create__ = TodoCreatedEvent
@@ -35,6 +38,10 @@ def test_application():
             self.title = evt.title
             self.description = evt.description
 
+        @classmethod
+        def load_events(cls):
+            return []
+
     @app.aggregate
     class TodoStatsAggregate(AggregateBase):
         __agg_create__ = TodoCreatedEvent
@@ -46,6 +53,10 @@ def test_application():
         def handle_created(self, evt: TodoCreatedEvent):
             self.id = evt.id
             self.num_events = 1
+
+        @classmethod
+        def load_events(cls):
+            return []
 
     assert TodoAggregate.__agg_id__ in TodoAggregate.__schema__
     assert TodoStatsAggregate.__agg_id__ in TodoStatsAggregate.__schema__
