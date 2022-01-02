@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import uuid
 import logging
-from typing import Dict, List
+from typing import Any, Dict, List, cast
 
 import money.framework.schema as schema
 import money.framework.predicate as P
@@ -67,11 +67,12 @@ class TodoAggregate(AggregateBase):
     @classmethod
     async def load_events(
         cls, storage: Storage, ids: List[str]
-    ) -> Dict[str, List[TodoEvent]]:
-        loaded = await storage.load_events(P.Or(*(P.Where(todo_id=id) for id in ids)))
-        events = {}
-        for evt in loaded:
-            assert isinstance(evt, TodoEvent)
+    ) -> Dict[Any, List[EventBase]]:
+        loaded = await storage.load_events(
+            P.Or(*(P.Where[EventBase](todo_id=id) for id in ids))
+        )
+        events: Dict[str, List[EventBase]] = {}
+        for evt in cast(List[TodoEvent], loaded):
             events.setdefault(evt.todo_id, []).append(evt)
         return events
 
@@ -133,7 +134,7 @@ class CountTodos(QueryBase):
     class Result(schema.SimpleSchema):
         count = schema.Field(schema.Int, nullable=False)
 
-    async def fetch(self, storage: Storage) -> Result:
+    async def fetch(self, storage: Storage):
         creation_events = list(await storage.load_events(P.Is(TodoCreatedEvent)))
         return self.Result(count=len(creation_events))
 
@@ -145,7 +146,8 @@ class FindTodo(QueryBase):
     class Arguments(schema.SimpleSchema):
         id = schema.Field(schema.Str, nullable=False)
 
-    async def fetch(self, storage: Storage, args: Arguments) -> Result:
+    async def fetch(self, storage: Storage, args: Arguments = None) -> TodoAggregate:
+        assert args
         return await TodoAggregate.load(storage, args.id)
 
 
@@ -160,12 +162,11 @@ class ListTodos(QueryBase):
         updated_before = schema.Field(schema.DateTime)
         updated_after = schema.Field(schema.DateTime)
 
-    async def fetch(self, storage: Storage, args: Arguments) -> Result:
+    async def fetch(self, storage: Storage, args: Arguments = None) -> Result:
         all_events = await storage.load_events(P.Is(TodoEvent))
-        agg_events = {}
-        for e in all_events:
-            assert isinstance(e, TodoEvent)
-            agg_events.setdefault(e.todo_id, []).append(e)
+        agg_events: Dict[str, List[EventBase]] = {}
+        for evt in all_events:
+            agg_events.setdefault(cast(TodoEvent, evt).todo_id, []).append(evt)
         todos = [TodoAggregate.from_events(evts) for evts in agg_events.values()]
         return self.Result(todos=todos)
 

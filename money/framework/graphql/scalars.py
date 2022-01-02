@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List, NoReturn, overload
+from typing import Any, Dict, List, overload
 import graphene
 import graphql.language.ast as gqlast
 
@@ -116,6 +116,11 @@ class PredicateScalar(graphene.Scalar):
     @overload
     @staticmethod
     def _node_to_value(node: gqlast.NullValueNode) -> None:
+        ...
+
+    @overload
+    @staticmethod
+    def _node_to_value(node: gqlast.ValueNode) -> Any:
         ...
 
     @staticmethod

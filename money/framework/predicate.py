@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import datetime
 from os import stat
-from typing import Any, Dict, Generic, Type, TypeVar, Union
+from typing import Any, Dict, Generic, Iterable, Type, TypeVar, Union
 
 from money.framework.schema import Field
 
@@ -11,7 +11,7 @@ T = TypeVar("T")
 
 
 class Predicate(Generic[T], ABC):
-    __slots__ = tuple()
+    __slots__: tuple = ()
 
     @abstractmethod
     def __call__(self, item: T) -> bool:
@@ -20,13 +20,17 @@ class Predicate(Generic[T], ABC):
     def __str__(self) -> str:
         return str(self.to_dict())
 
-    def __eq__(self, other: Predicate) -> bool:
-        return self.__class__ == other.__class__ and all(
-            getattr(self, slot) == getattr(other, slot) for slot in self.__slots__
-        )
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+        for slot in self.__slots__:
+            if getattr(self, slot) != getattr(other, slot):
+                print("not equal:", getattr(self, slot), getattr(other, slot))
+                return False
+        return True
 
     def __hash__(self) -> int:
-        return super(object).__hash__()
+        return super().__hash__()
 
     @abstractmethod
     def to_dict(self) -> Dict[str, Any]:
@@ -37,9 +41,9 @@ class Predicate(Generic[T], ABC):
         if isinstance(src, dict) and len(src) == 1:
             name, val = next(iter(src.items()))
             if name == "and" and isinstance(val, list):
-                return And(*(Predicate.from_dict(v) for v in val))
+                return And(*(Predicate[T].from_dict(v) for v in val))
             elif name == "or" and isinstance(val, list):
-                return Or(*(Predicate.from_dict(v) for v in val))
+                return Or(*(Predicate[T].from_dict(v) for v in val))
             elif name == "is" and all(isinstance(v, type) for v in val):
                 return Is(*(v for v in val))
             elif name == "where" and isinstance(val, dict):
@@ -116,7 +120,7 @@ class Where(Predicate[T]):
 
 
 class FieldPredicate(ABC):
-    __slots__ = tuple()
+    __slots__: tuple = ()
 
     @abstractmethod
     def __call__(self, value: Any) -> bool:
@@ -125,13 +129,13 @@ class FieldPredicate(ABC):
     def __str__(self) -> str:
         return str(self.to_dict())
 
-    def __eq__(self, other: FieldPredicate) -> bool:
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, self.__class__) and all(
             getattr(self, slot) == getattr(other, slot) for slot in self.__slots__
         )
 
     def __hash__(self) -> int:
-        return super(object).__hash__()
+        return super().__hash__()
 
     @abstractmethod
     def to_dict(self) -> Dict[str, Any]:

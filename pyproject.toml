@@ -19,6 +19,14 @@ aiopg = "^1.3.3"
 aiosqlite = "^0.17.0"
 pytest = "^6.2.5"
 pytest-asyncio = "^0.16.0"
+mypy = "^0.930"
+graphene-stubs = "^0.15"
+
+[tool.mypy]
+python_version = "3.10"
+mypy_path=["money"]
+files=["money","tests"]
+follow_imports="normal"
 
 [tool.pytest.ini_options]
 testpaths = [

@@ -36,7 +36,7 @@ class Second(schema.SchemaBase, metaclass=schema.SchemaMeta):
             {
                 # passes
                 Is(First): True,
-                Or(Is(First), Is(Second)): True,
+                Or[Any](Is(First), Is(Second)): True,
                 Where(a=Eq("a"), b=Eq(2)): True,
                 Where(a=Less("b"), b=Less(3)): True,
                 Where(a=More(""), b=More(1)): True,
@@ -46,7 +46,7 @@ class Second(schema.SchemaBase, metaclass=schema.SchemaMeta):
                 Where(a=Between("", "z"), b=Between(1, 3)): True,
                 # fails
                 Is(Second): False,
-                And(Is(First), Is(Second)): False,
+                And[Any](Is(First), Is(Second)): False,
                 Where(a=Eq("z"), b=Eq(9999)): False,
                 Where(a=Less(""), b=Less(0)): False,
                 Where(a=More("z"), b=More(3)): False,

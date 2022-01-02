@@ -154,7 +154,7 @@ class GraphQLApplication(Application):
                     for name, field in cmd.Result.__schema__.items()
                 }
                 if hasattr(cmd, "Result") and cmd.Result
-                else {"ok": graphene.Boolean(required=True)}
+                else {"ok": graphene.Field(graphene.Boolean, required=True)}
             )
             arg_fields = {
                 name: arg_to_graphql(field) for name, field in cmd.__schema__.items()

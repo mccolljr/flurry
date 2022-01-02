@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 import money.framework.schema as schema
 from money.framework.storage import Storage
@@ -67,5 +67,5 @@ class QueryBase(metaclass=QueryMeta):
         super().__init__(**kwargs)
 
     @abstractmethod
-    async def fetch(self, storage: Storage, args=None) -> Any:
+    async def fetch(self, storage: Storage) -> Union[schema.SchemaBase, None]:
         ...

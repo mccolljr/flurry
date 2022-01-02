@@ -28,11 +28,10 @@ def handle_event(evt_class: Type[E]) -> EventHandlerDecorator[E]:
 
 
 class EventHandler(Generic[E]):
-    _handler: EventHandlerFunction[E]
     _evt_class: Type[E]
 
     def __init__(self, handler: EventHandlerFunction[E], evt_class: Type[E]):
-        self._handler = handler
+        self.__dict__["_handler"] = handler
         self._evt_class = evt_class
 
     def __set_name__(self, owner: Any, name: str):
@@ -51,4 +50,4 @@ class EventHandler(Generic[E]):
     ) -> Union["EventHandler[E]", Callable[[E], None]]:
         if obj is None:
             return self
-        return lambda evt: self._handler(obj, evt)
+        return lambda evt: self.__dict__["_handler"](obj, evt)

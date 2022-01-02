@@ -1,12 +1,10 @@
 from __future__ import annotations
 from abc import ABCMeta, abstractmethod
-from typing import Any, Dict, List, Mapping, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Mapping, Tuple, Type, TypeVar, cast
 
 import money.framework.schema as schema
 from money.framework.event import EventBase, EventMeta
 from money.framework.storage import Storage
-
-E = TypeVar("E", bound=type)
 
 
 class AggregateDefinitionError(Exception):
@@ -87,13 +85,12 @@ class AggregateBase(schema.SchemaBase, metaclass=AggregateMeta):
     @abstractmethod
     async def load_events(
         cls, storage: Storage, ids: List[Any]
-    ) -> Mapping[Any, List[EventBase]]:
+    ) -> Dict[Any, List[EventBase]]:
         ...
 
     @classmethod
     async def load(cls: Type[TAggSelf], storage: Storage, id: Any) -> TAggSelf:
-        events = await cls.load_events(storage, [id])
-        events = events.get(id, [])
+        events = (await cls.load_events(storage, [id])).get(id, [])
         if not events:
             raise ValueError(f"no {cls.__name__} with id {id}")
         if not isinstance(events[0], cls.__agg_create__):
