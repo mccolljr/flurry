@@ -38,7 +38,7 @@ class CommandMeta(schema.SchemaMeta, ABCMeta):
     @staticmethod
     def _validate_exec(the_cls: type):
         exec = getattr(the_cls, "exec", None)
-        if exec is None:
+        if exec is None or getattr(exec, "__isabstractmethod__", False):
             raise CommandDefinitionError(
                 the_cls.__name__, "exec method must be defined"
             )

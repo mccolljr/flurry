@@ -54,7 +54,7 @@ class QueryMeta(ABCMeta):
     @staticmethod
     def _validate_fetch(the_cls: type):
         fetch = getattr(the_cls, "fetch", None)
-        if fetch is None:
+        if fetch is None or getattr(fetch, "__isabstractmethod__", False):
             raise QueryDefinitionError(the_cls.__name__, "fetch method must be defined")
         if not callable(fetch):
             raise QueryDefinitionError(the_cls.__name__, f"fetch must be callable")
