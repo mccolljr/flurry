@@ -21,12 +21,34 @@ pytest = "^6.2.5"
 pytest-asyncio = "^0.16.0"
 mypy = "^0.930"
 graphene-stubs = "^0.15"
+pylint = "^2.12.2"
 
 [tool.mypy]
 python_version = "3.10"
 mypy_path=["money"]
 files=["money","tests"]
 follow_imports="normal"
+
+[tool.pylint.messages_control]
+
+max-line-length = 120
+
+disable = [
+  "no-member",
+  "no-self-use",
+  "wrong-import-order",
+  "too-many-statements",
+  "too-few-public-methods",
+  "import-outside-toplevel",
+  "missing-module-docstring",
+  "too-many-return-statements",
+  "missing-function-docstring",
+]
+
+[tool.pylint.design]
+# Allow a larger number of returns to enable
+# switch-like statements with many returning cases
+max-returns = 20
 
 [tool.pytest.ini_options]
 testpaths = [

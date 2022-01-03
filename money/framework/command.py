@@ -1,11 +1,13 @@
 from abc import ABCMeta, abstractmethod
-from typing import Any, Awaitable, Dict, Optional, Tuple
+from typing import Any, Dict, Generic, Optional, Tuple, TypeVar, Union
 
-import money.framework.schema as schema
+from money.framework import schema
 from money.framework.storage import Storage
 
 
 class CommandDefinitionError(Exception):
+    """An exception caused by an invalid command class definition."""
+
     def __init__(self, query_name: str, problem: str):
         self.query_name = query_name
         self.problem = problem
@@ -13,45 +15,58 @@ class CommandDefinitionError(Exception):
 
 
 class CommandMeta(schema.SchemaMeta, ABCMeta):
+    """The metaclass that all command classes must inherit from."""
+
     __cmd_mixin__: bool
     Result: Optional[schema.SchemaMeta]
 
     def __new__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
         attrs.setdefault("__cmd_mixin__", False)
-        x = super().__new__(cls, name, bases, attrs)
-        return x
+        new_class = super().__new__(cls, name, bases, attrs)
+        return new_class
 
     def __init__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
+        super().__init__(name, bases, attrs)
         if not cls.__cmd_mixin__:
             CommandMeta._validate_exec(cls)
             CommandMeta._validate_result(cls)
 
     @staticmethod
     def _validate_result(the_cls: type):
-        Result = getattr(the_cls, "Result", None)
-        if Result is not None and not isinstance(Result, schema.SchemaMeta):
+        result_class = getattr(the_cls, "Result", None)
+        if result_class is not None and not isinstance(result_class, schema.SchemaMeta):
             raise CommandDefinitionError(
                 the_cls.__name__,
-                f"Result must be a type (have {type(Result)})",
+                f"Result must be a type (have {type(result_class)})",
             )
 
     @staticmethod
     def _validate_exec(the_cls: type):
-        exec = getattr(the_cls, "exec", None)
-        if exec is None or getattr(exec, "__isabstractmethod__", False):
+        exec_method = getattr(the_cls, "exec", None)
+        if exec_method is None or getattr(exec_method, "__isabstractmethod__", False):
             raise CommandDefinitionError(
                 the_cls.__name__, "exec method must be defined"
             )
-        if not callable(exec):
-            raise CommandDefinitionError(the_cls.__name__, f"exec must be callable")
+        if not callable(exec_method):
+            raise CommandDefinitionError(the_cls.__name__, "exec must be callable")
 
 
-class CommandBase(schema.SchemaBase, metaclass=CommandMeta):
+TCommandResult = TypeVar("TCommandResult", bound=Union[schema.SchemaBase, None])
+
+
+class CommandBase(Generic[TCommandResult], schema.SchemaBase, metaclass=CommandMeta):
+    """The class that all commands must subclass.
+
+    A subclass may specify a `Result` member which points to some class
+    where `isinstance(Result, SchemaMeta)` is `True`, If `Result` is specified,
+    this class will be used as the result of the query.
+
+    If a subclass specifies a member `__cmd_mixin__` with a value of `True`,
+    that class can serve as a common base class for multiple commands.
+    """
+
     __cmd_mixin__ = True
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     @abstractmethod
-    async def exec(self, storage: Storage) -> Any:
+    async def exec(self, storage: Storage) -> TCommandResult:
         ...

@@ -1,13 +1,19 @@
 from __future__ import annotations
 from abc import ABCMeta, abstractmethod
-from typing import Any, Dict, List, Mapping, Tuple, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Dict, Generic, List, Tuple, Type, TypeVar
 
-import money.framework.schema as schema
+from money.framework import schema
 from money.framework.event import EventBase, EventMeta
-from money.framework.storage import Storage
+
+if TYPE_CHECKING:
+    from money.framework.storage import Storage
+
+EventRoot = TypeVar("EventRoot", bound=EventBase)
 
 
 class AggregateDefinitionError(Exception):
+    """An exception caused by an invalid aggregate class definition."""
+
     def __init__(self, agg_name: str, problem: str):
         self.agg_name = agg_name
         self.problem = problem
@@ -15,6 +21,8 @@ class AggregateDefinitionError(Exception):
 
 
 class AggregateMeta(schema.SchemaMeta, ABCMeta):
+    """The metaclass that all aggregate classes must inherit from."""
+
     __agg_id__: str
     __agg_name__: str
     __agg_mixin__: bool
@@ -27,10 +35,11 @@ class AggregateMeta(schema.SchemaMeta, ABCMeta):
             attrs.setdefault("__agg_id__", "id")
             attrs.setdefault("__agg_name__", name)
             attrs.setdefault("__agg_events__", {})
-        x = super().__new__(cls, name, bases, attrs)
-        return x
+        new_class = super().__new__(cls, name, bases, attrs)
+        return new_class
 
     def __init__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
+        super().__init__(name, bases, attrs)
         if not cls.__agg_mixin__:
             AggregateMeta._validate_aggregate_id(cls)
             AggregateMeta._validate_creation_event(cls)
@@ -71,13 +80,12 @@ class AggregateMeta(schema.SchemaMeta, ABCMeta):
 TAggSelf = TypeVar("TAggSelf", bound="AggregateBase")
 
 
-class AggregateBase(schema.SchemaBase, metaclass=AggregateMeta):
+class AggregateBase(Generic[EventRoot], schema.SchemaBase, metaclass=AggregateMeta):
+    """The base class that all aggregate classes must inherit from."""
+
     __agg_mixin__ = True
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def apply_event(self, event: EventBase):
+    def apply_event(self, event: EventRoot):
         handler_name = type(self).__agg_events__[type(event)]
         getattr(self, handler_name)(event)
 
@@ -85,19 +93,19 @@ class AggregateBase(schema.SchemaBase, metaclass=AggregateMeta):
     @abstractmethod
     async def load_events(
         cls, storage: Storage, ids: List[Any]
-    ) -> Dict[Any, List[EventBase]]:
+    ) -> Dict[Any, List[EventRoot]]:
         ...
 
     @classmethod
-    async def load(cls: Type[TAggSelf], storage: Storage, id: Any) -> TAggSelf:
-        events = (await cls.load_events(storage, [id])).get(id, [])
+    async def load(cls: Type[TAggSelf], storage: Storage, agg_id: Any) -> TAggSelf:
+        events = (await cls.load_events(storage, [agg_id])).get(agg_id, [])
         if not events:
-            raise ValueError(f"no {cls.__name__} with id {id}")
+            raise ValueError(f"no {cls.__name__} with id {agg_id}")
         if not isinstance(events[0], cls.__agg_create__):
-            raise ValueError(f"first event must be creation event")
+            raise ValueError("first event must be creation event")
         loaded = cls.__new__(cls)
-        for e in events:
-            loaded.apply_event(e)
+        for loaded_evt in events:
+            loaded.apply_event(loaded_evt)
         return loaded
 
     @classmethod
@@ -108,12 +116,12 @@ class AggregateBase(schema.SchemaBase, metaclass=AggregateMeta):
         return [cls.from_events(evts) for evts in events.values()]
 
     @classmethod
-    def from_events(cls: Type[TAggSelf], events: List[EventBase]) -> TAggSelf:
+    def from_events(cls: Type[TAggSelf], events: List[EventRoot]) -> TAggSelf:
         if not events:
             raise ValueError(f"no {cls.__name__} with id {id}")
         if not isinstance(events[0], cls.__agg_create__):
-            raise ValueError(f"first event must be creation event")
+            raise ValueError("first event must be creation event")
         loaded = cls.__new__(cls)
-        for e in events:
-            loaded.apply_event(e)
+        for src_evt in events:
+            loaded.apply_event(src_evt)
         return loaded

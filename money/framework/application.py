@@ -1,27 +1,34 @@
-from inspect import isawaitable
 import json
 import logging
-import asyncio
-from typing import Any, Dict, List, Type, TypeVar, Union
+from inspect import isawaitable
+from typing import Any, Dict, Iterable, List, Tuple, Type, TypeVar, Union
 
 import graphene
-import aiohttp.web as web
+from aiohttp import web
 
 
-import money.framework.schema as schema
+from money.framework import schema
 from money.framework.aggregate import AggregateMeta
 from money.framework.command import CommandMeta
 from money.framework.event import EventMeta
 from money.framework.query import QueryMeta
 from money.framework.storage import Storage
 
-TEvtMeta = TypeVar("TEvtMeta", bound=EventMeta)
-TQryMeta = TypeVar("TQryMeta", bound=QueryMeta)
-TCmdMeta = TypeVar("TCmdMeta", bound=CommandMeta)
-TAggMeta = TypeVar("TAggMeta", bound=AggregateMeta)
+TEventMeta = TypeVar("TEventMeta", bound=EventMeta)
+TQueryMeta = TypeVar("TQueryMeta", bound=QueryMeta)
+TCommandMeta = TypeVar("TCommandMeta", bound=CommandMeta)
+TAggregateMeta = TypeVar("TAggregateMeta", bound=AggregateMeta)
 
 
 class Application:
+    """Application is the core type for applications using the framework.
+    It is responsible for registering events, queries, commands, aggregates,
+    modules, etc.
+
+    By itself, an Application doesn't know how to run a web server or handle requests.
+    This behavior is delegated to subclasses of Application.
+    """
+
     _events: List[EventMeta]
     _queries: List[QueryMeta]
     _commands: List[CommandMeta]
@@ -34,32 +41,113 @@ class Application:
         self._aggregates = []
         self._related_events = {}
         self._creation_events = {}
-        pass
 
-    def event(self, evt: TEvtMeta) -> TEvtMeta:
+    def event(self, evt: TEventMeta) -> TEventMeta:
         self._events.append(evt)
         return evt
 
-    def query(self, qry: TQryMeta) -> TQryMeta:
+    def query(self, qry: TQueryMeta) -> TQueryMeta:
         self._queries.append(qry)
         return qry
 
-    def command(self, cmd: TCmdMeta) -> TCmdMeta:
+    def command(self, cmd: TCommandMeta) -> TCommandMeta:
         self._commands.append(cmd)
         return cmd
 
-    def aggregate(self, agg: TAggMeta) -> TAggMeta:
+    def aggregate(self, agg: TAggregateMeta) -> TAggregateMeta:
         self._aggregates.append(agg)
-        for e in agg.__agg_events__:
-            self._related_events.setdefault(e, []).append(agg)
+        for evt_class in agg.__agg_events__:
+            self._related_events.setdefault(evt_class, []).append(agg)
         self._creation_events.setdefault(agg.__agg_create__, []).append(agg)
         return agg
+
+    def register_modules(
+        self,
+        *imports: Union[str, Iterable[str], Tuple[str, str], Tuple[str, Iterable[str]]],
+    ):
+        """
+        You may want to define different components of your app in separate files.
+        The `register_modules` method informs the app of these module locations, and
+        the app will import them. If the imported module defines a `register_module`
+        function, it will be called with the app instance.
+
+        ## Example:
+
+        in `yourproject/app.py`:
+        ```
+        APP: Application = ... # create and configure an Application instance
+        ```
+
+        in `yourproject/agg.py`:
+        ```
+        from yourproject.app import APP
+
+        @APP.aggregate
+        class YourAggregate(AggregateBase):
+            # define some aggregate
+            ...
+        ```
+
+        in `yourproject/event.py`:
+        ```
+        from yourproject.app import APP
+
+        @APP.event
+        class YourEvent(EventBase):
+            # define some event
+            ...
+        ```
+
+        in `thirdparty/utilmodule.py`:
+        ```
+        def register_module(app: Application):
+            # registers one or more aggregates, events, commands, queries, or modules
+            ...
+        ```
+
+        in `yourproject/__main__.py`:
+        ```
+        from yourproject.app import APP
+
+        APP.register_modules(
+            "yourproject.agg",
+            "yourproject.event",
+            "thirdparty.utilmodule"
+        )
+
+        if __name__ == "__main__":
+            APP.run()
+        ```
+        """
+        import importlib
+
+        for mod in imports:
+            pkg, names = None, []
+            if isinstance(mod, tuple):
+                pkg = mod[0]
+                if isinstance(mod[1], str):
+                    names = [mod[1]]
+                else:
+                    names = list(mod[1])
+            else:
+                if isinstance(mod, str):
+                    names = [mod]
+                else:
+                    names = list(mod)
+
+            for name in names:
+                imp = importlib.import_module(name, pkg)
+                registration_fn = getattr(imp, "register_module", None)
+                if callable(registration_fn):
+                    registration_fn(self)
 
     def run(self):
         raise NotImplementedError
 
 
 class GraphQLApplication(Application):
+    """An Application that provides a GraphQL interface over HTTP."""
+
     def __init__(self, storage: Storage):
         super().__init__()
         self.storage = storage
@@ -83,14 +171,14 @@ class GraphQLApplication(Application):
             field: schema.Field[Any],
         ) -> graphene.Field:
             return graphene.Field(
-                field_kind_to_graphql(field._kind), required=not field._nullable
+                field_kind_to_graphql(field.kind), required=not field.nullable
             )
 
         def arg_to_graphql(
             field: schema.Field[Any],
         ) -> graphene.Argument:
             return graphene.Argument(
-                field_kind_to_graphql(field._kind), required=not field._nullable
+                field_kind_to_graphql(field.kind), required=not field.nullable
             )
 
         def field_kind_to_graphql(
@@ -109,15 +197,17 @@ class GraphQLApplication(Application):
             if isinstance(kind, schema.DateTime):
                 return graphene.DateTime
             if isinstance(kind, schema.Collection):
-                return graphene.List(graphene.NonNull(field_kind_to_graphql(kind.of)))
+                return graphene.List(
+                    graphene.NonNull(field_kind_to_graphql(kind.of_kind))
+                )
             if isinstance(kind, schema.Object):
-                assert isinstance(kind.of, schema.SchemaMeta)
-                obj_name = f"Gql{kind.of.__name__}Object"
+                assert isinstance(kind.of_typ, schema.SchemaMeta)
+                obj_name = f"Gql{kind.of_typ.__name__}Object"
                 obj_type = next(
                     (ot for ot in gql_types if ot.__name__ == obj_name), None
                 )
                 if obj_type is None:
-                    obj_type = schema_to_graphql(obj_name, kind.of.__schema__)
+                    obj_type = schema_to_graphql(obj_name, kind.of_typ.__schema__)
                     gql_types.append(obj_type)
                 return obj_type
             if hasattr(kind, "to_graphql"):
@@ -125,12 +215,15 @@ class GraphQLApplication(Application):
             raise TypeError(f"unknown field kind {type(kind)}")
 
         def schema_to_graphql(
-            name: str, schema: Dict[str, schema.Field[Any]]
+            name: str, convert_schema: Dict[str, schema.Field[Any]]
         ) -> Type[graphene.ObjectType]:
             return type(
                 name,
                 (graphene.ObjectType,),
-                {name: field_to_graphql(field) for name, field in schema.items()},
+                {
+                    name: field_to_graphql(field)
+                    for name, field in convert_schema.items()
+                },
             )
 
         def query_to_graphql(
@@ -146,7 +239,7 @@ class GraphQLApplication(Application):
             return schema_to_graphql(f"Gql{agg.__name__}Object", agg.__schema__)
 
         def cmd_to_graphql(cmd: CommandMeta) -> graphene.Field:
-            Mutation: Type[graphene.Mutation]
+            mutation_class: Type[graphene.Mutation]
             custom_results = getattr(cmd, "Result", None) is not None
             result_fields = (
                 {
@@ -161,16 +254,24 @@ class GraphQLApplication(Application):
             }
             Arguments = type("Arguments", (), arg_fields)
 
-            async def mutate(parent: Any, info: graphene.ResolveInfo, **args):
-                cmd_inst = cmd(**args)
-                result = cmd_inst.exec(storage=self.storage)
-                if info.is_awaitable(result):
-                    result = await result
-                if custom_results:
-                    return Mutation(**result.to_dict())
-                return Mutation(ok=True)
+            async def mutate(*_, **args):
+                try:
+                    cmd_inst = cmd(**args)
+                    result = cmd_inst.exec(storage=self.storage)
+                    if isawaitable(result):
+                        result = await result
+                    if custom_results:
+                        return mutation_class(**result.to_dict())
+                    return mutation_class(ok=True)
+                except Exception as err:
+                    logging.error(
+                        "failure while processing command: %s",
+                        cmd.__name__,
+                        exc_info=err,
+                    )
+                    raise
 
-            Mutation = type(
+            mutation_class = type(
                 f"Gql{cmd.__name__}Mutation",
                 (graphene.Mutation,),
                 dict(
@@ -179,7 +280,7 @@ class GraphQLApplication(Application):
                     **result_fields,
                 ),
             )
-            return Mutation.Field()
+            return mutation_class.Field()
 
         def gen_gql_types():
             return [agg_to_graphql(agg) for agg in self._aggregates]
@@ -205,12 +306,12 @@ class GraphQLApplication(Application):
                         for name, field in query_argtyp.__schema__.items()
                     }
 
-                async def resolver_fn(parent: Any, info: graphene.ResolveInfo, **args):
-                    q = query_typ()
+                async def resolver_fn(*_, **args):
+                    query_val = query_typ()
                     if query_argtyp is not None:
-                        result = q.fetch(self.storage, query_argtyp(**args))
+                        result = query_val.fetch(self.storage, query_argtyp(**args))
                     else:
-                        result = q.fetch(self.storage)
+                        result = query_val.fetch(self.storage)
                     if isawaitable(result):
                         result = await result
                     return result
@@ -236,24 +337,7 @@ class GraphQLApplication(Application):
         return graphene.Schema(query=gql_query, mutation=gql_mutations, types=gql_types)
 
     def run(self):
-        web_app = self._setup_app()
-        loop = asyncio.new_event_loop()
-        runner = web.AppRunner(web_app)
-        loop.run_until_complete(runner.setup())
-        site = web.TCPSite(runner)
-        loop.run_until_complete(site.start())
-        try:
-
-            def on_exc(loop: asyncio.AbstractEventLoop, ctx: dict):
-                logging.error(ctx["message"], exc_info=ctx["exception"])
-
-            loop.set_exception_handler(on_exc)
-            loop.run_forever()
-        except KeyboardInterrupt:
-            print("shutting down...")
-            loop.run_until_complete(site.stop())
-        finally:
-            loop.close()
+        web.run_app(self._setup_app())
 
     def _setup_app(self):
         _ = self.gql_schema

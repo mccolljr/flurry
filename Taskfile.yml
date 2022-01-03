@@ -22,6 +22,7 @@ tasks:
 
   test:api:
     - pytest -s
+    - pylint --rcfile=pyproject.toml money.framework
     - mypy
 
   test:site:

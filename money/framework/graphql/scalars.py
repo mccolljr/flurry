@@ -7,6 +7,8 @@ import money.framework.predicate as P
 
 
 class JSONScalar(graphene.Scalar):
+    """A JSON scalar type for GraphQL."""
+
     @staticmethod
     def serialize(value):
         return json.dumps(value)
@@ -19,6 +21,8 @@ class JSONScalar(graphene.Scalar):
 
 
 class PredicateScalar(graphene.Scalar):
+    """A scalar type for query predicates for GraphQL."""
+
     @staticmethod
     def serialize(value):
         if isinstance(value, P.Predicate):
@@ -26,55 +30,57 @@ class PredicateScalar(graphene.Scalar):
         raise ValueError(f"cannot serialize {value} as Predicate scalar")
 
     @staticmethod
-    def _serialize_toplevel(p: P.Predicate):
-        if isinstance(p, P.And):
-            preds = [PredicateScalar._serialize_toplevel(pred) for pred in p.preds]
+    def _serialize_toplevel(pred: P.Predicate):
+        if isinstance(pred, P.And):
+            preds = [PredicateScalar._serialize_toplevel(pred) for pred in pred.preds]
             return f"{{ and: [{', '.join(preds)}] }}"
-        elif isinstance(p, P.Or):
-            alts = [PredicateScalar._serialize_toplevel(pred) for pred in p.alts]
+        if isinstance(pred, P.Or):
+            alts = [PredicateScalar._serialize_toplevel(pred) for pred in pred.alts]
             return f"{{ or: [{', '.join(alts)}] }}"
-        elif isinstance(p, P.Where):
+        if isinstance(pred, P.Where):
             fields = {
                 name: PredicateScalar._serialize_field_pred(fp)
-                for name, fp in p.fields.items()
+                for name, fp in pred.fields.items()
             }
             fields_as_str = [f"{name}: {value}" for name, value in fields.items()]
             return f"{{ where: {{ {', '.join(fields_as_str)} }} }}"
 
-        raise ValueError(f"cannot serialize predicate {p}")
+        raise ValueError(f"cannot serialize predicate {pred}")
 
     @staticmethod
-    def _serialize_field_pred(p: P.FieldPredicate):
-        if isinstance(p, P.Eq):
-            return f"{{ eq: {PredicateScalar._serialize_field_pred_value(p.expect)} }}"
-        elif isinstance(p, P.Less):
-            return f"{{ less: {PredicateScalar._serialize_field_pred_value(p.limit)} }}"
-        elif isinstance(p, P.More):
-            return f"{{ more: {PredicateScalar._serialize_field_pred_value(p.limit)} }}"
-        elif isinstance(p, P.LessEq):
+    def _serialize_field_pred(pred: P.FieldPredicate):
+        if isinstance(pred, P.Eq):
             return (
-                f"{{ less_eq: {PredicateScalar._serialize_field_pred_value(p.limit)} }}"
+                f"{{ eq: {PredicateScalar._serialize_field_pred_value(pred.expect)} }}"
             )
-        elif isinstance(p, P.MoreEq):
+        if isinstance(pred, P.Less):
             return (
-                f"{{ more_eq: {PredicateScalar._serialize_field_pred_value(p.limit)} }}"
+                f"{{ less: {PredicateScalar._serialize_field_pred_value(pred.limit)} }}"
             )
-        elif isinstance(p, P.Between):
-            lower = PredicateScalar._serialize_field_pred_value(p.lower)
-            upper = PredicateScalar._serialize_field_pred_value(p.upper)
+        if isinstance(pred, P.More):
+            return (
+                f"{{ more: {PredicateScalar._serialize_field_pred_value(pred.limit)} }}"
+            )
+        if isinstance(pred, P.LessEq):
+            return f"{{ less_eq: {PredicateScalar._serialize_field_pred_value(pred.limit)} }}"
+        if isinstance(pred, P.MoreEq):
+            return f"{{ more_eq: {PredicateScalar._serialize_field_pred_value(pred.limit)} }}"
+        if isinstance(pred, P.Between):
+            lower = PredicateScalar._serialize_field_pred_value(pred.lower)
+            upper = PredicateScalar._serialize_field_pred_value(pred.upper)
             return f"{{ between: [{lower}, {upper}] }}"
-        elif isinstance(p, P.OneOf):
+        if isinstance(pred, P.OneOf):
             options = [
-                PredicateScalar._serialize_field_pred_value(opt) for opt in p.options
+                PredicateScalar._serialize_field_pred_value(opt) for opt in pred.options
             ]
             return f"{{ one_of: [{', '.join(options)}] }}"
-        raise ValueError(f"cannot serialize field predicate {p}")
+        raise ValueError(f"cannot serialize field predicate {pred}")
 
     @staticmethod
-    def _serialize_field_pred_value(v: Any):
-        if v is None or isinstance(v, (str, int, float, bool)):
-            return json.dumps(v)
-        raise ValueError(f"cannot serialize field predicate value {v}")
+    def _serialize_field_pred_value(val: Any):
+        if val is None or isinstance(val, (str, int, float, bool)):
+            return json.dumps(val)
+        raise ValueError(f"cannot serialize field predicate value {val}")
 
     @staticmethod
     def parse_literal(ast: gqlast.Node):

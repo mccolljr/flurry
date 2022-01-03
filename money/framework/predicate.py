@@ -2,19 +2,17 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from os import stat
-from typing import Any, Dict, Generic, Iterable, Type, TypeVar, Union
+from typing import Any, Dict, Union
 
 from money.framework.schema import Field
 
-T = TypeVar("T")
 
-
-class Predicate(Generic[T], ABC):
+class Predicate(ABC):
+    "The base class for object predicates."
     __slots__: tuple = ()
 
     @abstractmethod
-    def __call__(self, item: T) -> bool:
+    def __call__(self, item: Any) -> bool:
         pass
 
     def __str__(self) -> str:
@@ -29,6 +27,7 @@ class Predicate(Generic[T], ABC):
                 return False
         return True
 
+    # pylint: disable=useless-super-delegation
     def __hash__(self) -> int:
         return super().__hash__()
 
@@ -41,58 +40,66 @@ class Predicate(Generic[T], ABC):
         if isinstance(src, dict) and len(src) == 1:
             name, val = next(iter(src.items()))
             if name == "and" and isinstance(val, list):
-                return And(*(Predicate[T].from_dict(v) for v in val))
-            elif name == "or" and isinstance(val, list):
-                return Or(*(Predicate[T].from_dict(v) for v in val))
-            elif name == "is" and all(isinstance(v, type) for v in val):
+                return And(*(Predicate.from_dict(v) for v in val))
+            if name == "or" and isinstance(val, list):
+                return Or(*(Predicate.from_dict(v) for v in val))
+            if name == "is" and all(isinstance(v, type) for v in val):
                 return Is(*(v for v in val))
-            elif name == "where" and isinstance(val, dict):
+            if name == "where" and isinstance(val, dict):
                 return Where(
                     **{name: FieldPredicate.from_dict(val) for name, val in val.items()}
                 )
         raise ValueError(f"{src} ({type(src)}) is not a valid predicate")
 
 
-class And(Predicate[T]):
+class And(Predicate):
+    """A predicate combinator, checking that all sub-predicates pass."""
+
     __slots__ = ("preds",)
 
-    def __init__(self, *preds: Predicate[T]):
+    def __init__(self, *preds: Predicate):
         self.preds = preds
 
-    def __call__(self, item: T) -> bool:
+    def __call__(self, item: Any) -> bool:
         return all(pred(item) for pred in self.preds)
 
     def to_dict(self) -> Dict[str, Any]:
         return {"and": [p.to_dict() for p in self.preds]}
 
 
-class Or(Predicate[T]):
+class Or(Predicate):
+    """A predicate combinator, checking that at least one sub-predicate passes."""
+
     __slots__ = ("alts",)
 
-    def __init__(self, *alts: Predicate[T]):
+    def __init__(self, *alts: Predicate):
         self.alts = alts
 
-    def __call__(self, item: T) -> bool:
+    def __call__(self, item: Any) -> bool:
         return any(pred(item) for pred in self.alts)
 
     def to_dict(self) -> Dict[str, Any]:
         return {"or": [p.to_dict() for p in self.alts]}
 
 
-class Is(Predicate[T]):
+class Is(Predicate):
+    """A predicate to check that a value is of a certain type."""
+
     __slots__ = ("types",)
 
-    def __init__(self, *types: Type[T]):
+    def __init__(self, *types: type):
         self.types = types
 
-    def __call__(self, item: T) -> bool:
+    def __call__(self, item: Any) -> bool:
         return isinstance(item, self.types)
 
     def to_dict(self) -> Dict[str, Any]:
         return {"is": list(self.types)}
 
 
-class Where(Predicate[T]):
+class Where(Predicate):
+    """A predicate to check that a value's fields meet certain criteria."""
+
     __slots__ = ("fields",)
 
     def __init__(self, **fields: Union[FieldPredicate, Any]):
@@ -101,18 +108,18 @@ class Where(Predicate[T]):
             for field, pred in fields.items()
         }
 
-    def __call__(self, item: T) -> bool:
+    def __call__(self, item: Any) -> bool:
         return all(
             pred(self.__get_field(item, name)) for name, pred in self.fields.items()
         )
 
-    def __get_field(self, item: T, name: str) -> Any:
+    def __get_field(self, item: Any, name: str) -> Any:
         attr_name = name
         __schema__ = getattr(item, "__schema__", None)
         if __schema__ is not None and name in __schema__:
             field = __schema__[name]
             if isinstance(field, Field):
-                attr_name = field._attr_name
+                attr_name = field.attr_name
         return getattr(item, attr_name, None)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -120,6 +127,7 @@ class Where(Predicate[T]):
 
 
 class FieldPredicate(ABC):
+    "The base class for field predicates."
     __slots__: tuple = ()
 
     @abstractmethod
@@ -134,33 +142,37 @@ class FieldPredicate(ABC):
             getattr(self, slot) == getattr(other, slot) for slot in self.__slots__
         )
 
+    # pylint: disable=useless-super-delegation
     def __hash__(self) -> int:
         return super().__hash__()
 
     @abstractmethod
     def to_dict(self) -> Dict[str, Any]:
+        """Generates the dictionary form of a FieldPredicate"""
         ...
 
     @staticmethod
     def from_dict(src: Dict[str, Any]) -> FieldPredicate:
+        """Constructs a FieldPredicate from its dictionary form"""
+
         if isinstance(src, dict) and len(src) == 1:
             name, val = next(iter(src.items()))
             if name == "eq":
                 return Eq(FieldPredicate.__decode_value(val))
-            elif name == "less":
+            if name == "less":
                 return Less(FieldPredicate.__decode_value(val))
-            elif name == "more":
+            if name == "more":
                 return More(FieldPredicate.__decode_value(val))
-            elif name == "less_eq":
+            if name == "less_eq":
                 return LessEq(FieldPredicate.__decode_value(val))
-            elif name == "more_eq":
+            if name == "more_eq":
                 return MoreEq(FieldPredicate.__decode_value(val))
-            elif name == "between" and isinstance(val, list) and len(val) == 2:
+            if name == "between" and isinstance(val, list) and len(val) == 2:
                 return Between(
                     FieldPredicate.__decode_value(val[0]),
                     FieldPredicate.__decode_value(val[1]),
                 )
-            elif name == "one_of" and isinstance(val, (list, tuple)):
+            if name == "one_of" and isinstance(val, (list, tuple)):
                 return OneOf(*(FieldPredicate.__decode_value(v) for v in val))
         raise ValueError("{src} is not a valid field predicate")
 
@@ -172,6 +184,8 @@ class FieldPredicate(ABC):
 
 
 class Eq(FieldPredicate):
+    """Checks that a field value is the expected value."""
+
     __slots__ = ("expect",)
 
     def __init__(self, expect: Any):
@@ -185,6 +199,8 @@ class Eq(FieldPredicate):
 
 
 class OneOf(FieldPredicate):
+    """Checks that a field value is one of the expected values."""
+
     __slots__ = ("options",)
 
     def __init__(self, *options: Any):
@@ -198,6 +214,8 @@ class OneOf(FieldPredicate):
 
 
 class Less(FieldPredicate):
+    """Checks that a field value is less than the limit value."""
+
     __slots__ = ("limit",)
 
     def __init__(self, limit: Any):
@@ -211,6 +229,8 @@ class Less(FieldPredicate):
 
 
 class More(FieldPredicate):
+    """Checks that a field value is greater than the limit value."""
+
     __slots__ = ("limit",)
 
     def __init__(self, limit: Any):
@@ -224,6 +244,8 @@ class More(FieldPredicate):
 
 
 class LessEq(FieldPredicate):
+    """Checks that a field value is less than or equal to the limit value."""
+
     __slots__ = ("limit",)
 
     def __init__(self, limit: Any):
@@ -237,6 +259,8 @@ class LessEq(FieldPredicate):
 
 
 class MoreEq(FieldPredicate):
+    """Checks that a field value is greater than or equal to the limit value."""
+
     __slots__ = ("limit",)
 
     def __init__(self, limit: Any):
@@ -250,6 +274,8 @@ class MoreEq(FieldPredicate):
 
 
 class Between(FieldPredicate):
+    """Checks that a field value is strictly between the upper and lower limit values."""
+
     __slots__ = ("upper", "lower")
 
     def __init__(self, lower: Any, upper: Any):
