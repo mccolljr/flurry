@@ -3,32 +3,14 @@ schema {
   mutation: GqlMutations
 }
 
-type GqlTodoAggregateObject {
-  id: String
-  title: String
-  description: String
-  completed: Boolean
-}
-
-type GqlQuery {
-  GqlCountTodosQuery: GqlCountTodosQuery
-  GqlFindTodoQuery(id: String!): GqlFindTodoQuery
-  GqlListTodosQuery(updatedBefore: DateTime = null, updatedAfter: DateTime = null): GqlListTodosQuery
-}
-
-type GqlCountTodosQuery {
-  count: Int!
-}
-
-type GqlFindTodoQuery {
-  id: String
-  title: String
-  description: String
-  completed: Boolean
-}
-
-type GqlListTodosQuery {
-  todos: [GqlTodoAggregateObject!]!
+type GqlUserAggregateObject {
+  uuid: String!
+  firstName: String!
+  lastName: String!
+  username: String!
+  email: String!
+  hashedPassword: String!
+  lastLogin: DateTime
 }
 
 """
@@ -38,20 +20,24 @@ value as specified by
 """
 scalar DateTime
 
+type GqlQuery {
+  GqlFindUserByUsernameQuery(username: String!): GqlFindUserByUsernameQuery
+}
+
+type GqlFindUserByUsernameQuery {
+  user: GqlUserAggregateObject
+}
+
 type GqlMutations {
-  GqlCreateTodoMutation(description: String!, title: String!): GqlCreateTodoMutation
-  GqlModifyTodoMutation(description: String = null, title: String = null, todoId: String!): GqlModifyTodoMutation
-  GqlCompleteTodoMutation(todoId: String!): GqlCompleteTodoMutation
+  GqlCreateUserCommandMutation(email: String!, firstName: String!, lastName: String!, password: String!, username: String!): GqlCreateUserCommandMutation
+  GqlLogInCommandMutation(password: String!, username: String!): GqlLogInCommandMutation
 }
 
-type GqlCreateTodoMutation {
-  created: GqlTodoAggregateObject!
-}
-
-type GqlModifyTodoMutation {
+type GqlCreateUserCommandMutation {
   ok: Boolean!
 }
 
-type GqlCompleteTodoMutation {
-  ok: Boolean!
+type GqlLogInCommandMutation {
+  success: GqlUserAggregateObject
+  failure: String
 }

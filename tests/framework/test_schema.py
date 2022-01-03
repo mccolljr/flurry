@@ -1,3 +1,5 @@
+# pylint: disable-all
+
 from typing import Any
 import pytest
 import datetime
@@ -90,9 +92,9 @@ def test_schema_inheritance():
         "child_field": Child.child_field,
         "sub_child_field": SubChild.sub_child_field,
     }
-    assert isinstance(SubChild.base_field._kind, schema.Str)
-    assert isinstance(SubChild.child_field._kind, schema.Str)
-    assert isinstance(SubChild.sub_child_field._kind, schema.Str)
+    assert isinstance(SubChild.base_field.kind, schema.Str)
+    assert isinstance(SubChild.child_field.kind, schema.Str)
+    assert isinstance(SubChild.sub_child_field.kind, schema.Str)
     assert SubChild.base_field == Base.base_field
     assert SubChild.child_field == Child.child_field
 
@@ -110,9 +112,9 @@ def test_complex_schema_fields():
     assert SubObj.__schema__ == {"foo": SubObj.foo, "bar": SubObj.bar}
     assert TopObj.__schema__ == {"coll": TopObj.coll}
     assert (
-        isinstance(TopObj.coll._kind, schema.Collection)
-        and isinstance(TopObj.coll._kind.of, schema.Object)
-        and TopObj.coll._kind.of.of == SubObj
+        isinstance(TopObj.coll.kind, schema.Collection)
+        and isinstance(TopObj.coll.kind.of_kind, schema.Object)
+        and TopObj.coll.kind.of_kind.of_typ == SubObj
     )
 
     obj = TopObj()
