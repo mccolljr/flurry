@@ -60,4 +60,5 @@ class Second(schema.SchemaBase, metaclass=schema.SchemaMeta):
 )
 def test_predicates(value: Any, tests: Dict[Predicate, bool]):
     for pred, want_pass in tests.items():
+        assert pred == pred
         assert pred(value) == want_pass, f"pred={pred}"

@@ -1,11 +1,11 @@
 import json
 import logging
 from inspect import isawaitable
-from typing import Any, Dict, Iterable, List, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, Iterable, List, NamedTuple, Tuple, Type, TypeVar, Union
 
 import graphene
 from aiohttp import web
-
+from aiohttp_middlewares.cors import cors_middleware
 
 from money.framework import schema
 from money.framework.aggregate import AggregateMeta
@@ -145,12 +145,19 @@ class Application:
         raise NotImplementedError
 
 
+class CorsOptions(NamedTuple):
+    """CORS configuration options."""
+
+    allow_origin: str
+
+
 class GraphQLApplication(Application):
     """An Application that provides a GraphQL interface over HTTP."""
 
-    def __init__(self, storage: Storage):
+    def __init__(self, storage: Storage, cors_opts: CorsOptions = None):
         super().__init__()
         self.storage = storage
+        self.cors_opts = cors_opts
 
     @property
     def gql_schema(self) -> graphene.Schema:
@@ -341,7 +348,13 @@ class GraphQLApplication(Application):
 
     def _setup_app(self):
         _ = self.gql_schema
-        web_app = web.Application()
+        web_app = web.Application(
+            middlewares=[
+                cors_middleware(origins=[self.cors_opts.allow_origin])
+                if self.cors_opts is not None
+                else cors_middleware(allow_all=True)
+            ]
+        )
         web_app.add_routes([web.post("/", self._handle_req)])
         return web_app
 

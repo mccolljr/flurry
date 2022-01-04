@@ -191,7 +191,7 @@ class Int(FieldKind[int]):
             return value
         if isinstance(value, float):
             return int(value)
-        raise ValueError(f"{value} cannot be converted to int")
+        raise ValueError(f"{repr(value)} cannot be converted to int")
 
     def validate(self, value: int):
         pass
@@ -207,7 +207,7 @@ class Float(FieldKind[float]):
             return float(value)
         if isinstance(value, float):
             return value
-        raise ValueError(f"{value} cannot be converted to float")
+        raise ValueError(f"{repr(value)} cannot be converted to float")
 
     def validate(self, value: float):
         pass
@@ -219,6 +219,10 @@ class Str(FieldKind[str]):
     def convert(self, value: Any) -> str:
         if isinstance(value, str):
             return value
+        if isinstance(value, bytes):
+            return str(value, "utf-8")
+        if isinstance(value, datetime):
+            return value.isoformat()
         return str(value)
 
     def validate(self, value: str):
@@ -233,7 +237,7 @@ class Bool(FieldKind[bool]):
             return value != 0
         if isinstance(value, bool):
             return value
-        raise ValueError(f"{value} cannot be converted to bool")
+        raise ValueError(f"{repr(value)} cannot be converted to bool")
 
     def validate(self, value: bool):
         pass
@@ -247,7 +251,7 @@ class Bytes(FieldKind[bytes]):
             return bytes(value, "utf-8")
         if isinstance(value, bytes):
             return value
-        raise ValueError(f"{value} cannot be converted to bytes")
+        raise ValueError(f"{repr(value)} cannot be converted to bytes")
 
     def validate(self, value: bytes):
         pass
@@ -256,21 +260,28 @@ class Bytes(FieldKind[bytes]):
 class DateTime(FieldKind[datetime]):
     """A FieldType describing a datetime value."""
 
-    format_str: str
-
-    def __init__(self, format_str: str = "%a %b %d %H:%M:%S %Y"):
-        self.format_str = format_str
-
     def convert(self, value: Any) -> datetime:
         if isinstance(value, str):
-            return datetime.strptime(value, self.format_str)
+            return DateTime._from_isofmt(value)
         if isinstance(value, int):
             return datetime.utcfromtimestamp(float(value))
         if isinstance(value, float):
             return datetime.utcfromtimestamp(value)
         if isinstance(value, datetime):
-            return value.replace(microsecond=0)
-        raise ValueError(f"{value} cannot be converted to datetime")
+            return value
+        raise ValueError(f"{repr(value)} cannot be converted to datetime")
+
+    @staticmethod
+    def _from_isofmt(src: str) -> datetime:
+        try:
+            return datetime.fromisoformat(src)
+        except ValueError:
+            pass
+        if src.endswith("Z"):
+            return datetime.fromisoformat(f"{src[:-1]}+00:00")
+        if src.endswith(("UTC", "GMT")):
+            return datetime.fromisoformat(f"{src[:-3]}+00:00")
+        raise ValueError(f"{repr(src)} is not a valid ISO 8601 string")
 
     def validate(self, value: datetime):
         pass

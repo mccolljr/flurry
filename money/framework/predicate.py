@@ -23,13 +23,22 @@ class Predicate(ABC):
             return False
         for slot in self.__slots__:
             if getattr(self, slot) != getattr(other, slot):
-                print("not equal:", getattr(self, slot), getattr(other, slot))
                 return False
         return True
 
-    # pylint: disable=useless-super-delegation
     def __hash__(self) -> int:
-        return super().__hash__()
+        return hash(
+            tuple(self.__hashable(getattr(self, slot)) for slot in self.__slots__)
+        )
+
+    def __hashable(self, val: Any):
+        if isinstance(val, dict):
+            return tuple(
+                (self.__hashable(k), self.__hashable(v)) for k, v in val.items()
+            )
+        if isinstance(val, list):
+            return tuple(self.__hashable(v) for v in val)
+        return val
 
     @abstractmethod
     def to_dict(self) -> Dict[str, Any]:
@@ -142,9 +151,19 @@ class FieldPredicate(ABC):
             getattr(self, slot) == getattr(other, slot) for slot in self.__slots__
         )
 
-    # pylint: disable=useless-super-delegation
     def __hash__(self) -> int:
-        return super().__hash__()
+        return hash(
+            tuple(self.__hashable(getattr(self, slot)) for slot in self.__slots__)
+        )
+
+    def __hashable(self, val: Any):
+        if isinstance(val, dict):
+            return tuple(
+                (self.__hashable(k), self.__hashable(v)) for k, v in val.items()
+            )
+        if isinstance(val, list):
+            return tuple(self.__hashable(v) for v in val)
+        return val
 
     @abstractmethod
     def to_dict(self) -> Dict[str, Any]:

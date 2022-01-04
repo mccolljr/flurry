@@ -18,6 +18,54 @@ def test_no_schema_metaclass():
         field = schema.Field(schema.Str)
 
 
+@pytest.mark.parametrize(
+    ["src", "want"],
+    [
+        (
+            "2022-01-04T01:07:11.682",
+            datetime.datetime(2022, 1, 4, 1, 7, 11, 682000),
+        ),
+        (
+            "2022-01-04T01:07:11.682Z",
+            datetime.datetime(
+                2022, 1, 4, 1, 7, 11, 682000, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "2022-01-04T01:07:11.682UTC",
+            datetime.datetime(
+                2022, 1, 4, 1, 7, 11, 682000, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "2022-01-04T01:07:11.682GMT",
+            datetime.datetime(
+                2022, 1, 4, 1, 7, 11, 682000, tzinfo=datetime.timezone.utc
+            ),
+        ),
+        (
+            "2022-01-04T01:07:11.682+01:00",
+            datetime.datetime(
+                2022,
+                1,
+                4,
+                1,
+                7,
+                11,
+                682000,
+                tzinfo=datetime.timezone(datetime.timedelta(seconds=3600)),
+            ),
+        ),
+    ],
+)
+def test_datetime_field(src: str, want: datetime.datetime):
+    class DateTimeSchema(SchemaBaseForTests):
+        field = schema.Field(schema.DateTime, nullable=False)
+
+    inst = DateTimeSchema(field=src)
+    assert inst.field == want
+
+
 def test_schema_fields():
     const_dt = datetime.datetime(
         year=2021, month=12, day=29, hour=0, minute=0, second=0, microsecond=0
@@ -53,7 +101,7 @@ def test_schema_fields():
         "int_field": "100",
         "flt_field": "100.25",
         "byt_field": "xyz",
-        "dtm_field": now_dt.strftime("%a %b %d %H:%M:%S %Y"),
+        "dtm_field": now_dt.isoformat(),
         "bool_field": True,
     }
     want_vals = {
@@ -68,6 +116,9 @@ def test_schema_fields():
     for k in init_vals:
         assert getattr(inst, k) == want_vals[k]
     assert inst.to_dict() == want_vals
+
+    inst.dtm_field = now_dt.isoformat() + "Z"
+    assert inst.dtm_field == now_dt.replace(tzinfo=datetime.timezone.utc)
 
 
 def test_schema_inheritance():
