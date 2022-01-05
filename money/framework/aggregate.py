@@ -29,13 +29,19 @@ class AggregateMeta(schema.SchemaMeta, ABCMeta):
     __agg_events__: Dict[EventMeta, str]
     __agg_create__: EventMeta
 
+    __by_name: Dict[str, AggregateMeta] = {}
+
     def __new__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
         # create aggregate metadata
         if not attrs.setdefault("__agg_mixin__", False):
+            if name in cls.__by_name:
+                raise TypeError(f"duplicate definition for aggregate {name}")
             attrs.setdefault("__agg_id__", "id")
             attrs.setdefault("__agg_name__", name)
             attrs.setdefault("__agg_events__", {})
         new_class = super().__new__(cls, name, bases, attrs)
+        if not new_class.__agg_mixin__:
+            cls.__by_name[name] = new_class
         return new_class
 
     def __init__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
@@ -44,6 +50,10 @@ class AggregateMeta(schema.SchemaMeta, ABCMeta):
             AggregateMeta._validate_aggregate_id(cls)
             AggregateMeta._validate_creation_event(cls)
             AggregateMeta._validate_load_events_method(cls)
+
+    @classmethod
+    def construct_named(cls, name: str, args: Dict[str, Any]) -> AggregateBase:
+        return cls.__by_name[name](**args)
 
     @staticmethod
     def _validate_aggregate_id(the_cls: AggregateMeta):

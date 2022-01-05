@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, Callable, Dict, Generic, Tuple, Type, TypeVar, Union, overload
 
 from money.framework.schema import SchemaBase, SchemaMeta
@@ -12,9 +13,18 @@ EventHandlerDecorator = Callable[[EventHandlerFunction[TEvt]], "EventHandler[TEv
 class EventMeta(SchemaMeta):
     """The metaclass that all event classes must inherit from."""
 
+    __by_name: Dict[str, EventMeta] = {}
+
     def __new__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
+        if name in cls.__by_name:
+            raise TypeError(f"duplicate definition for event {name}")
         new_class = super().__new__(cls, name, bases, attrs)
+        cls.__by_name[name] = new_class
         return new_class
+
+    @classmethod
+    def construct_named(cls, name: str, args: Dict[str, Any]) -> EventBase:
+        return cls.__by_name[name](**args)
 
 
 class EventBase(SchemaBase, metaclass=EventMeta):
