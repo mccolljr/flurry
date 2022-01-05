@@ -1,9 +1,9 @@
 schema {
-  query: GqlQuery
-  mutation: GqlMutations
+  query: QueryRoot
+  mutation: MutationRoot
 }
 
-type GqlUserAggregateObject {
+type UserAggregate {
   uuid: String!
   firstName: String!
   lastName: String!
@@ -20,24 +20,24 @@ value as specified by
 """
 scalar DateTime
 
-type GqlQuery {
-  GqlFindUserByUsernameQuery(username: String!): GqlFindUserByUsernameQuery
+type QueryRoot {
+  FindUserByUsername(username: String!): FindUserByUsernameResult
 }
 
-type GqlFindUserByUsernameQuery {
-  user: GqlUserAggregateObject
+type FindUserByUsernameResult {
+  user: UserAggregate
 }
 
-type GqlMutations {
-  GqlCreateUserCommandMutation(email: String!, firstName: String!, lastName: String!, password: String!, username: String!): GqlCreateUserCommandMutation
-  GqlLogInCommandMutation(password: String!, username: String!): GqlLogInCommandMutation
+type MutationRoot {
+  CreateUserCommand(email: String!, firstName: String!, lastName: String!, password: String!, username: String!): CreateUserCommandResult
+  LogInCommand(password: String!, username: String!): LogInCommandResult
 }
 
-type GqlCreateUserCommandMutation {
+type CreateUserCommandResult {
   ok: Boolean!
 }
 
-type GqlLogInCommandMutation {
-  success: GqlUserAggregateObject
+type LogInCommandResult {
+  success: UserAggregate
   failure: String
 }
