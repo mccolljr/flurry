@@ -38,6 +38,7 @@ max-line-length = 120
 disable = [
   "no-member",
   "no-self-use",
+  "duplicate-code", # this flags imports from `typing` as duplicate 🙄
   "wrong-import-order",
   "too-many-statements",
   "too-few-public-methods",

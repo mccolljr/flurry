@@ -11,6 +11,7 @@ from typing import (
     Tuple,
     Type,
     Union,
+    cast,
 )
 
 import graphene
@@ -81,10 +82,26 @@ class GraphQLGenerator:
         """
         return graphene.Argument(
             self.field_kind_to_graphql_kind(
-                field.kind, containing_type=graphene.ObjectType
+                field.kind, containing_type=graphene.InputObjectType
             ),
             required=not field.nullable,
         )
+
+    def get_graphql_object_type(
+        self, source: schema.SchemaMeta, base: Type[GraphQLAnyObject]
+    ) -> Type[GraphQLAnyObject]:
+        obj_name = source.__name__
+        if base is graphene.InputObjectType:
+            obj_name += "Input"
+        obj_type: Type[GraphQLAnyObject]
+        if obj_name in self.gql_types[base]:
+            obj_type = self.gql_types[base][obj_name]
+        else:
+            obj_type = self.schema_to_graphql_object(
+                obj_name, source.__schema__, object_type=base
+            )
+            self.gql_types[base][obj_name] = obj_type
+        return obj_type
 
     def field_kind_to_graphql_kind(
         self,
@@ -112,17 +129,9 @@ class GraphQLGenerator:
             )
             return graphene.List(graphene.NonNull(subtyp))
         if isinstance(kind, schema.Object):
-            assert isinstance(kind.of_typ, schema.SchemaMeta)
-            obj_name = kind.of_typ.__name__
-            obj_type: Type[GraphQLAnyObject]
-            if obj_name in self.gql_types[containing_type]:
-                obj_type = self.gql_types[containing_type][obj_name]
-            else:
-                obj_type = self.schema_to_graphql_object(
-                    obj_name, kind.of_typ.__schema__, object_type=containing_type
-                )
-                self.gql_types[containing_type][obj_name] = obj_type
-            return obj_type
+            return self.get_graphql_object_type(
+                cast(schema.SchemaMeta, kind.of_typ), containing_type
+            )
         if hasattr(kind, "to_graphql"):
             return getattr(kind, "to_graphql")()
         raise TypeError(f"unknown field kind {type(kind)}")
