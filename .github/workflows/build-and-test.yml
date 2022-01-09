@@ -24,6 +24,7 @@ jobs:
         run: |
           source .venv/bin/activate
           task install
+          task postgres:build
       - name: run tests
         run: |
           source .venv/bin/activate

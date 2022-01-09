@@ -1,13 +1,12 @@
 # editor files
 **/.vscode/
 
-# python environments & artifacts
+# python environments
 **/.venv/
-**/__pycache__/
 **/.mypy_cache
 **/.pytest_cache
+**/__pycache__/
 
-# node & node_modules
-**/node_modules/
-**/build
+# artifacts
 **/*.log
+dist/
