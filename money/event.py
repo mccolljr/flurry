@@ -55,7 +55,7 @@ class EventHandler(Generic[TEvt]):
         owner.__agg_events__[self._evt_class] = name
 
     @overload
-    def __get__(self, obj: None, objtype: Any) -> "EventHandler[TEvt]":
+    def __get__(self, obj: None, objtype: Any) -> EventHandler[TEvt]:
         ...
 
     @overload

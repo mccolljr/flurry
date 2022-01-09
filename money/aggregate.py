@@ -1,6 +1,15 @@
 from __future__ import annotations
 from abc import ABCMeta, abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, Generic, List, Tuple, Type, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generic,
+    List,
+    Tuple,
+    Type,
+    TypeVar,
+)
 
 from money import schema
 from money.event import EventBase, EventMeta
@@ -31,7 +40,9 @@ class AggregateMeta(schema.SchemaMeta, ABCMeta):
 
     __by_name: Dict[str, AggregateMeta] = {}
 
-    def __new__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
+    def __new__(
+        cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any], **extra
+    ):
         # create aggregate metadata
         if not attrs.setdefault("__agg_mixin__", False):
             if name in cls.__by_name:
@@ -39,12 +50,15 @@ class AggregateMeta(schema.SchemaMeta, ABCMeta):
             attrs.setdefault("__agg_id__", "id")
             attrs.setdefault("__agg_name__", name)
             attrs.setdefault("__agg_events__", {})
+            attrs.setdefault("__agg_create__", extra.get("create", None))
         new_class = super().__new__(cls, name, bases, attrs)
         if not new_class.__agg_mixin__:
             cls.__by_name[name] = new_class
         return new_class
 
-    def __init__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
+    def __init__(
+        cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any], **_extra
+    ):
         super().__init__(name, bases, attrs)
         if not cls.__agg_mixin__:
             AggregateMeta._validate_aggregate_id(cls)
@@ -59,12 +73,13 @@ class AggregateMeta(schema.SchemaMeta, ABCMeta):
     def _validate_aggregate_id(the_cls: AggregateMeta):
         if not (the_cls.__agg_id__ and the_cls.__agg_id__ in the_cls.__schema__):
             raise AggregateDefinitionError(
-                the_cls.__name__, "must define an id field, or must specify __agg_id__"
+                the_cls.__name__,
+                "must define an 'id' field, or must specify __agg_id__",
             )
 
     @staticmethod
     def _validate_creation_event(the_cls: AggregateMeta):
-        if not hasattr(the_cls, "__agg_create__"):
+        if not isinstance(getattr(the_cls, "__agg_create__", None), EventMeta):
             raise AggregateDefinitionError(
                 the_cls.__name__, "must specify a creation event in __agg_create__"
             )
@@ -108,15 +123,10 @@ class AggregateBase(Generic[EventRoot], schema.SchemaBase, metaclass=AggregateMe
 
     @classmethod
     async def load(cls: Type[TAggSelf], storage: Storage, agg_id: Any) -> TAggSelf:
-        events = (await cls.load_events(storage, [agg_id])).get(agg_id, [])
-        if not events:
+        loaded = await cls.load_all(storage, [agg_id])
+        if not loaded:
             raise ValueError(f"no {cls.__name__} with id {agg_id}")
-        if not isinstance(events[0], cls.__agg_create__):
-            raise ValueError("first event must be creation event")
-        loaded = cls.__new__(cls)
-        for loaded_evt in events:
-            loaded.apply_event(loaded_evt)
-        return loaded
+        return loaded[0]
 
     @classmethod
     async def load_all(
@@ -135,3 +145,8 @@ class AggregateBase(Generic[EventRoot], schema.SchemaBase, metaclass=AggregateMe
         for src_evt in events:
             loaded.apply_event(src_evt)
         return loaded
+
+    @classmethod
+    async def sync_snapshots(cls: Type[TAggSelf], storage: Storage, ids: List[Any]):
+        snaps = await cls.load_all(storage, ids)
+        await storage.save_snapshots(snaps)

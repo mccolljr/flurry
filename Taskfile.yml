@@ -15,17 +15,21 @@ tasks:
     - poetry install
 
   lint:
-    - mypy
+    - mypy --config-file=pyproject.toml
     - pylint --rcfile=pyproject.toml money
 
   test:
+    - task: lint
     - defer: { task: postgres:stop }
     - task: postgres:start
     - echo "waiting for database"
     - sleep 2
     - echo "running tests"
     - pytest -s --log-cli-level=INFO {{.CLI_ARGS}}
-    - task: lint
+    - task: test:example
+
+  test:example:
+    - python examples/todo/test_todo.py
 
   postgres:build:
     - docker build --tag money_pg:plpython3 - < Dockerfile.pg

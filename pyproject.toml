@@ -27,7 +27,7 @@ graphene-stubs = "^0.15"
 [tool.mypy]
 python_version = "3.10"
 mypy_path=["money"]
-files=["money","tests"]
+files=["money","tests","examples"]
 follow_imports="normal"
 
 [tool.pylint.messages_control]

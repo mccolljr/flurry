@@ -238,7 +238,7 @@ class PostgreSQLStorage:
                 )
                 if where_clause is not None:
                     sql_str += f" WHERE {where_clause}"
-
+            sql_str += " ORDER BY sequence_num ASC"
             LOG.info("SQL QUERY: %s", sql_str)
             await conn.execute(sql_str, params)
             async for row in conn:
@@ -285,6 +285,7 @@ class PostgreSQLStorage:
                 )
                 if where_clause is not None:
                     sql_str += f" WHERE {where_clause}"
+            sql_str += " ORDER BY sequence_num ASC"
             LOG.info("SQL QUERY: %s", sql_str)
             await conn.execute(sql_str, params)
             async for row in conn:

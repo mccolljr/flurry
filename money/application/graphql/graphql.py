@@ -61,5 +61,11 @@ class GraphqlApplication(Application):
             context=graphene.Context(storage=self.storage),
         )
         if result.errors:
-            return web.Response(body=",".join(map(str, result.errors)), status=500)
-        return web.Response(body=json.dumps(result.data), status=200)
+            return web.Response(
+                content_type="application/json",
+                body=json.dumps({"errors": ",".join(map(str, result.errors))}),
+                status=500,
+            )
+        return web.Response(
+            content_type="application/json", body=json.dumps(result.data), status=200
+        )
