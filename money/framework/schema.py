@@ -1,7 +1,4 @@
 from __future__ import annotations
-
-from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import (
     Any,
     Callable,
@@ -16,6 +13,9 @@ from typing import (
     TypeVar,
     overload,
 )
+
+from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 
 
 TAny = TypeVar("TAny")
@@ -260,27 +260,23 @@ class Bytes(FieldKind[bytes]):
 class DateTime(FieldKind[datetime]):
     """A FieldType describing a datetime value."""
 
+    def __init__(self, tzinfo: timezone = timezone.utc):
+        self.tzinfo = tzinfo
+
     def convert(self, value: Any) -> datetime:
         if isinstance(value, str):
-            return DateTime._from_isofmt(value)
-        if isinstance(value, int):
-            return datetime.utcfromtimestamp(float(value))
-        if isinstance(value, float):
-            return datetime.utcfromtimestamp(value)
+            return self._from_isofmt(value)
         if isinstance(value, datetime):
             return value
         raise ValueError(f"{repr(value)} cannot be converted to datetime")
 
-    @staticmethod
-    def _from_isofmt(src: str) -> datetime:
+    def _from_isofmt(self, src: str) -> datetime:
         try:
-            return datetime.fromisoformat(src)
+            return datetime.fromisoformat(src).astimezone(self.tzinfo)
         except ValueError:
             pass
         if src.endswith("Z"):
             return datetime.fromisoformat(f"{src[:-1]}+00:00")
-        if src.endswith(("UTC", "GMT")):
-            return datetime.fromisoformat(f"{src[:-3]}+00:00")
         raise ValueError(f"{repr(src)} is not a valid ISO 8601 string")
 
     def validate(self, value: datetime):

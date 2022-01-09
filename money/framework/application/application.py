@@ -1,17 +1,11 @@
-import json
 import logging
-from typing import Iterable, List, NamedTuple, Tuple, TypeVar, Union
+from typing import Iterable, List, Tuple, TypeVar, Union
 
-import graphene
-from aiohttp import web
-from aiohttp_middlewares.cors import cors_middleware
 
 from money.framework.aggregate import AggregateMeta
 from money.framework.command import CommandMeta
 from money.framework.event import EventMeta
-from money.framework.graphql.generator import GraphQLGenerator
 from money.framework.query import QueryMeta
-from money.framework.storage import Storage
 
 TEventMeta = TypeVar("TEventMeta", bound=EventMeta)
 TQueryMeta = TypeVar("TQueryMeta", bound=QueryMeta)
@@ -43,14 +37,17 @@ class Application:
 
     def event(self, evt: TEventMeta) -> TEventMeta:
         self._events.append(evt)
+        logging.info("application event: %s", evt.__name__)
         return evt
 
     def query(self, qry: TQueryMeta) -> TQueryMeta:
         self._queries.append(qry)
+        logging.info("application query: %s", qry.__name__)
         return qry
 
     def command(self, cmd: TCommandMeta) -> TCommandMeta:
         self._commands.append(cmd)
+        logging.info("application command: %s", cmd.__name__)
         return cmd
 
     def aggregate(self, agg: TAggregateMeta) -> TAggregateMeta:
@@ -58,6 +55,7 @@ class Application:
         for evt_class in agg.__agg_events__:
             self._related_events.setdefault(evt_class, []).append(agg)
         self._creation_events.setdefault(agg.__agg_create__, []).append(agg)
+        logging.info("application aggregate: %s", agg.__name__)
         return agg
 
     def register_modules(
@@ -139,59 +137,3 @@ class Application:
                 registration_fn = getattr(imp, "register_module", None)
                 if callable(registration_fn):
                     registration_fn(self)
-
-    def run(self):
-        raise NotImplementedError
-
-
-class CorsOptions(NamedTuple):
-    """CORS configuration options."""
-
-    allow_origin: str
-
-
-class GraphQLApplication(Application):
-    """An Application that provides a GraphQL interface over HTTP."""
-
-    def __init__(self, storage: Storage, cors_opts: CorsOptions = None):
-        super().__init__()
-        self.storage = storage
-        self.cors_opts = cors_opts
-
-    @property
-    def gql_schema(self) -> graphene.Schema:
-        existing = getattr(self, "__gql_schema", None)
-        if existing is None:
-            logging.info("building graphql schema")
-            existing = GraphQLGenerator(self).generate_schema()
-            setattr(self, "__gql_schema", existing)
-            logging.info("schema built successfully")
-        return existing
-
-    def run(self):
-        web.run_app(self._setup_app())
-
-    def _setup_app(self):
-        _ = self.gql_schema
-        web_app = web.Application(
-            middlewares=[
-                cors_middleware(origins=[self.cors_opts.allow_origin])
-                if self.cors_opts is not None
-                else cors_middleware(allow_all=True)
-            ]
-        )
-        web_app.add_routes([web.post("/", self._handle_req)])
-        return web_app
-
-    async def _handle_req(self, req: web.Request):
-        body = await req.json()
-        query = body.get("query", None)
-        var_vals = body.get("variables", None)
-        result = await self.gql_schema.execute_async(
-            query,
-            variable_values=var_vals,
-            context=graphene.Context(storage=self.storage),
-        )
-        if result.errors:
-            return web.Response(body=",".join(map(str, result.errors)), status=500)
-        return web.Response(body=json.dumps(result.data), status=200)

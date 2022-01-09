@@ -1,10 +1,15 @@
 # pylint: disable-all
 
 from typing import Any
+
 import pytest
-import datetime
+import datetime as dt
+import zoneinfo as zi
 
 import money.framework.schema as schema
+
+# A timezone at UTC-5:00 (generally corresponds to America/New_York)
+DEFAULT_TZ = dt.timezone(dt.timedelta(hours=-5))
 
 
 class SchemaBaseForTests(schema.SimpleSchema):
@@ -14,7 +19,7 @@ class SchemaBaseForTests(schema.SimpleSchema):
 
 @pytest.mark.xfail(raises=RuntimeError, strict=True)
 def test_no_schema_metaclass():
-    class OopsForgotSchema:
+    class OopsForgotMetaclass:
         field = schema.Field(schema.Str)
 
 
@@ -22,53 +27,50 @@ def test_no_schema_metaclass():
     ["src", "want"],
     [
         (
-            "2022-01-04T01:07:11.682",
-            datetime.datetime(2022, 1, 4, 1, 7, 11, 682000),
-        ),
-        (
-            "2022-01-04T01:07:11.682Z",
-            datetime.datetime(
-                2022, 1, 4, 1, 7, 11, 682000, tzinfo=datetime.timezone.utc
+            "2022-01-01T00:00:00.000Z",
+            dt.datetime.fromisoformat("2021-12-31T19:00:00.000").replace(
+                tzinfo=DEFAULT_TZ
             ),
         ),
         (
-            "2022-01-04T01:07:11.682UTC",
-            datetime.datetime(
-                2022, 1, 4, 1, 7, 11, 682000, tzinfo=datetime.timezone.utc
+            "2022-01-01T00:00:00.000+01:00",
+            dt.datetime.fromisoformat("2021-12-31T18:00:00.000").replace(
+                tzinfo=DEFAULT_TZ
             ),
         ),
         (
-            "2022-01-04T01:07:11.682GMT",
-            datetime.datetime(
-                2022, 1, 4, 1, 7, 11, 682000, tzinfo=datetime.timezone.utc
+            "2022-01-01T00:00:00.000-01:00",
+            dt.datetime.fromisoformat("2021-12-31T20:00:00.000").replace(
+                tzinfo=DEFAULT_TZ
             ),
         ),
         (
-            "2022-01-04T01:07:11.682+01:00",
-            datetime.datetime(
-                2022,
-                1,
-                4,
-                1,
-                7,
-                11,
-                682000,
-                tzinfo=datetime.timezone(datetime.timedelta(seconds=3600)),
+            # TODO: make this test pass for any local timezone
+            "2022-01-01T00:00:00.000",
+            dt.datetime.fromisoformat("2022-01-01T00:00:00.000").replace(
+                tzinfo=DEFAULT_TZ
             ),
         ),
     ],
 )
-def test_datetime_field(src: str, want: datetime.datetime):
+def test_datetime_field(src: str, want: dt.datetime):
     class DateTimeSchema(SchemaBaseForTests):
-        field = schema.Field(schema.DateTime, nullable=False)
+        field = schema.Field(schema.DateTime(tzinfo=DEFAULT_TZ), nullable=False)
 
     inst = DateTimeSchema(field=src)
     assert inst.field == want
 
 
 def test_schema_fields():
-    const_dt = datetime.datetime(
-        year=2021, month=12, day=29, hour=0, minute=0, second=0, microsecond=0
+    const_dt = dt.datetime(
+        year=2021,
+        month=12,
+        day=29,
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+        tzinfo=dt.timezone.utc,
     )
 
     class Test(SchemaBaseForTests):
@@ -87,7 +89,9 @@ def test_schema_fields():
     assert inst.dtm_field == const_dt
     assert inst.bool_field == False
 
-    now_dt = datetime.datetime.now().replace(microsecond=0)
+    now_dt = dt.datetime.utcnow().replace(
+        tzinfo=dt.timezone(dt.timedelta(seconds=-3600 * 5))
+    )
     inst = Test(dtm_field=now_dt)
     assert inst.str_field == "1"
     assert inst.int_field == 2
@@ -117,8 +121,8 @@ def test_schema_fields():
         assert getattr(inst, k) == want_vals[k]
     assert inst.to_dict() == want_vals
 
-    inst.dtm_field = now_dt.isoformat() + "Z"
-    assert inst.dtm_field == now_dt.replace(tzinfo=datetime.timezone.utc)
+    inst.dtm_field = now_dt.replace(tzinfo=None).isoformat() + "Z"
+    assert inst.dtm_field == now_dt.replace(tzinfo=dt.timezone.utc)
 
 
 def test_schema_inheritance():

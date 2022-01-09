@@ -2,14 +2,18 @@
 
 version: "3"
 
+env:
+  TZ: America/New_York
+
 tasks:
   default:
     - task: install
     - task: test
 
   install:api:
-    - 'if [ -z "$(which poetry)" ]; then pip install -r requirements.txt; fi'
-    - "poetry install"
+    - if [ -z "$(which poetry)" ]; then pip install -r requirements.txt; fi
+    - poetry install
+    - touch .venv/lib/python3.10/site-packages/aiopg/py.typed
 
   install:site:
     dir: site
@@ -20,22 +24,67 @@ tasks:
     - task: install:api
     - task: install:site
 
-  test:api:
-    - pytest -s
-    - pylint --rcfile=pyproject.toml money.framework
+  generate:api:
+    - python -m money --write-schema-only
+
+  generate:site:
+    dir: site
+    cmds:
+      - yarn generate
+
+  generate:
+    - task: generate:api
+    - task: generate:site
+
+  lint:api:
     - mypy
+    - pylint --rcfile=pyproject.toml money.framework
+
+  lint:site:
+    - echo "no lints for site"
+
+  lint:
+    - task: lint:api
+    - task: lint:site
+
+  test:api:
+    - defer: { task: stop:postgres }
+    - task: start:postgres
+    - echo "waiting for database"
+    - sleep 2
+    - echo "running tests"
+    - pytest -s --log-cli-level=INFO {{.CLI_ARGS}}
+    - task: lint:api
 
   test:site:
-    - echo "no tests"
+    - echo "no tests for site"
+    - task: lint:site
 
   test:
     - task: test:api
     - task: test:site
 
   start:api:
-    - python -m money
-
-  start:web:
-    dir: site
+    env:
+      PORT: 8080
+      HOST: "localhost"
     cmds:
-      - yarn serve
+      - python -m money
+
+  start:site:
+    dir: site
+    env:
+      PORT: 9090
+      HOST: "localhost"
+    cmds:
+      - PORT=9090 yarn dev
+
+  start:postgres:
+    - docker-compose up --detach postgres
+
+  stop:postgres:
+    - docker-compose down
+
+  start:docker:
+    - defer: docker-compose down
+    - docker-compose up --remove-orphans

@@ -3,7 +3,7 @@ import pytest
 import graphql.language.parser as gqlparse
 
 import money.framework.predicate as P
-from money.framework.graphql.scalars import JSONScalar, PredicateScalar
+from money.framework.application.graphql.scalars import JSONScalar, PredicateScalar
 
 
 @pytest.mark.parametrize(

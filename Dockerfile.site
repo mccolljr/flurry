@@ -1,0 +1,16 @@
+FROM node:16.13.1-slim
+
+RUN mkdir -p /site
+WORKDIR /site
+COPY ./site/node_modules     ./node_modules
+COPY ./site/package.json     .
+COPY ./site/yarn.lock        .
+COPY ./site/tsconfig.json    .
+COPY ./site/preact.config.js .
+COPY ./site/size-plugin.json .
+COPY ./site/src              ./src
+RUN yarn build
+
+EXPOSE 80
+ENV PORT=80
+CMD [ "yarn", "serve" ]

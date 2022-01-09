@@ -1,10 +1,9 @@
 import pytest
 
-import aiosqlite
-from money.framework.event import EventBase
 
-import money.framework.schema as schema
-from money.framework.predicate import Between, Eq, Less, Or, Where
+from money.framework import schema
+from money.framework import predicate as P
+from money.framework.event import EventBase
 from money.framework.storage import MemoryStorage, Storage
 
 
@@ -28,10 +27,10 @@ async def test_memory_storage():
     await storage.save_events(events)
 
     loaded = await storage.load_events(
-        Or(
-            Where(foo=Eq("quux")),
-            Where(bar=Between(0, 500)),
+        P.Or(
+            P.Where(foo=P.Eq("quux")),
+            P.Where(bar=P.Between(0, 500)),
         )
     )
 
-    assert len(list(loaded)) == 502
+    assert len(list(loaded)) == 504

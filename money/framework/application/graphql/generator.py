@@ -14,6 +14,7 @@ from typing import (
     cast,
 )
 
+
 import graphene
 from graphene.types.unmountedtype import UnmountedType
 
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
     ]
 
 
-class GraphQLGenerator:
+class GraphqlGenerator:
     """
     A class capable of generating a graphql schema for the given target application.
     """
@@ -310,4 +311,4 @@ class GraphQLGenerator:
         return graphene.Schema(query=gql_query, mutation=gql_mutation, types=gql_types)
 
 
-__all__ = ["GraphQLGenerator"]
+__all__ = ["GraphqlGenerator"]

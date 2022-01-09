@@ -178,6 +178,8 @@ class FieldPredicate(ABC):
             name, val = next(iter(src.items()))
             if name == "eq":
                 return Eq(FieldPredicate.__decode_value(val))
+            if name == "not_eq":
+                return Eq(FieldPredicate.__decode_value(val))
             if name == "less":
                 return Less(FieldPredicate.__decode_value(val))
             if name == "more":
@@ -203,7 +205,7 @@ class FieldPredicate(ABC):
 
 
 class Eq(FieldPredicate):
-    """Checks that a field value is the expected value."""
+    """Checks that a field value is equal to a value."""
 
     __slots__ = ("expect",)
 
@@ -215,6 +217,21 @@ class Eq(FieldPredicate):
 
     def to_dict(self):
         return {"eq": self.expect}
+
+
+class NotEq(FieldPredicate):
+    """Checks that a field value is not equal to a value."""
+
+    __slots__ = ("expect",)
+
+    def __init__(self, expect: Any):
+        self.expect = expect
+
+    def __call__(self, value: Any) -> bool:
+        return value != self.expect
+
+    def to_dict(self):
+        return {"not_eq": self.expect}
 
 
 class OneOf(FieldPredicate):
@@ -293,7 +310,7 @@ class MoreEq(FieldPredicate):
 
 
 class Between(FieldPredicate):
-    """Checks that a field value is strictly between the upper and lower limit values."""
+    """Checks that a field value is between the upper and lower limit values, inclusive."""
 
     __slots__ = ("upper", "lower")
 
@@ -302,7 +319,7 @@ class Between(FieldPredicate):
         self.lower = lower
 
     def __call__(self, value: Any) -> bool:
-        return self.lower < value < self.upper
+        return self.lower <= value <= self.upper
 
     def to_dict(self):
         return {"between": [self.lower, self.upper]}

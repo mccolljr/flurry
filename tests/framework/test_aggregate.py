@@ -1,8 +1,19 @@
 import pytest
 
 import money.framework.schema as schema
-from money.framework.aggregate import AggregateBase, AggregateDefinitionError
-from money.framework.event import EventBase, EventHandler, handle_event
+from money.framework.aggregate import (
+    AggregateMeta,
+    AggregateBase,
+    AggregateDefinitionError,
+)
+from money.framework.event import EventMeta, EventBase, EventHandler, handle_event
+
+
+@pytest.fixture(autouse=True)
+def unregister_names_and_stuff():
+    yield
+    setattr(EventMeta, "_EventMeta__by_name", {})
+    setattr(AggregateMeta, "_AggregateMeta__by_name", {})
 
 
 @pytest.mark.xfail(raises=AggregateDefinitionError, strict=True)
