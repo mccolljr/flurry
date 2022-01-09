@@ -3,6 +3,7 @@ version: '3.9'
 services:
   postgres:
     build:
+      context: .
       dockerfile: Dockerfile.pg
     environment:
       - POSTGRES_PASSWORD=unsafe
