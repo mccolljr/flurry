@@ -12,6 +12,8 @@ TQueryMeta = TypeVar("TQueryMeta", bound=QueryMeta)
 TCommandMeta = TypeVar("TCommandMeta", bound=CommandMeta)
 TAggregateMeta = TypeVar("TAggregateMeta", bound=AggregateMeta)
 
+LOG = logging.getLogger("application")
+
 
 class Application:
     """Application is the core type for applications using the framework.
@@ -37,17 +39,17 @@ class Application:
 
     def event(self, evt: TEventMeta) -> TEventMeta:
         self._events.append(evt)
-        logging.info("application event: %s", evt.__name__)
+        LOG.info("application event: %s", evt.__name__)
         return evt
 
     def query(self, qry: TQueryMeta) -> TQueryMeta:
         self._queries.append(qry)
-        logging.info("application query: %s", qry.__name__)
+        LOG.info("application query: %s", qry.__name__)
         return qry
 
     def command(self, cmd: TCommandMeta) -> TCommandMeta:
         self._commands.append(cmd)
-        logging.info("application command: %s", cmd.__name__)
+        LOG.info("application command: %s", cmd.__name__)
         return cmd
 
     def aggregate(self, agg: TAggregateMeta) -> TAggregateMeta:
@@ -55,7 +57,7 @@ class Application:
         for evt_class in agg.__agg_events__:
             self._related_events.setdefault(evt_class, []).append(agg)
         self._creation_events.setdefault(agg.__agg_create__, []).append(agg)
-        logging.info("application aggregate: %s", agg.__name__)
+        LOG.info("application aggregate: %s", agg.__name__)
         return agg
 
     def register_modules(

@@ -27,6 +27,8 @@ from money.framework.storage.utils import (
     visit_predicate,
 )
 
+LOG = logging.getLogger("postgresql")
+
 
 class _pgjson(json.JSONEncoder):
     """Provides JSON encoding for the database layer."""
@@ -40,16 +42,6 @@ class _pgjson(json.JSONEncoder):
     @classmethod
     def dumps(cls, val: Any) -> str:
         return json.dumps(val, cls=cls)
-
-
-class _lazymog:
-    def __init__(self, cur: aiopg.Cursor, sql: str, params: Optional[Iterable[Any]]):
-        self._cur = cur
-        self._sql = sql
-        self._params = params
-
-    def __str__(self) -> str:
-        return str(self._cur.mogrify(self._sql, self._params), "utf-8")
 
 
 class _PostgreSQLSimplifier(PredicateSQLSimplifier):
@@ -164,24 +156,7 @@ class PostgreSQLStorage:
                 async with conn.cursor() as cur:
                     await cur.execute("BEGIN;")
                     try:
-                        try:
-                            await cur.execute(
-                                "CREATE EXTENSION IF NOT EXISTS plpython3u;"
-                            )
-                        except Exception as err:  # pylint: disable=broad-except
-                            logging.error("SQL: failed to create plpython3u: %s", err)
-                        else:
-                            await cur.execute(
-                                """
-                                CREATE OR REPLACE FUNCTION fromisoformat(raw text)
-                                    RETURNS timestamp with time zone
-                                AS $$
-                                    from datetime import datetime
-                                    return datetime.fromisoformat(raw)
-                                $$ LANGUAGE plpython3u;
-                                """
-                            )
-                            self.__timestamp_convert = r"fromisoformat({})"
+                        LOG.info("creating tables")
                         await cur.execute(
                             """
                             CREATE TABLE IF NOT EXISTS __events (
@@ -201,6 +176,27 @@ class PostgreSQLStorage:
                             );
                             """
                         )
+                        try:
+                            await cur.execute(
+                                "CREATE EXTENSION IF NOT EXISTS plpython3u;"
+                            )
+                        except Exception as err:  # pylint: disable=broad-except
+                            LOG.error(
+                                "plpython3u is unavailable: %s", err, exc_info=err
+                            )
+                        else:
+                            await cur.execute(
+                                """
+                                CREATE OR REPLACE FUNCTION fromisoformat(raw text)
+                                    RETURNS timestamp with time zone
+                                AS $$
+                                    from datetime import datetime
+                                    return datetime.fromisoformat(raw)
+                                $$ LANGUAGE plpython3u;
+                                """
+                            )
+                            self.__timestamp_convert = r"fromisoformat({})"
+                            LOG.info("creating custom functions")
                         await cur.execute("COMMIT;")
                     except Exception:
                         await cur.execute("ROLLBACK;")
@@ -243,7 +239,7 @@ class PostgreSQLStorage:
                 if where_clause is not None:
                     sql_str += f" WHERE {where_clause}"
 
-            logging.info("SQL QUERY: %s", _lazymog(conn, sql_str, params))
+            LOG.info("SQL QUERY: %s", sql_str)
             await conn.execute(sql_str, params)
             async for row in conn:
                 evt = EventMeta.construct_named(row[0], row[1])
@@ -260,7 +256,7 @@ class PostgreSQLStorage:
                     _pgjson.dumps(evt.to_dict()),
                 )
                 await conn.execute(sql_str, params)
-            logging.info("SQL EXEC: %s", _lazymog(conn, sql_str, params))
+            LOG.info("SQL EXEC: %s", sql_str)
 
     async def save_snapshots(self, snaps: Iterable[AggregateBase]):
         async with self.get_cursor() as conn:
@@ -275,7 +271,7 @@ class PostgreSQLStorage:
                             aggregate_data=excluded.aggregate_data;
                     """
                 params = (snap_id, snap_typ.__name__, snap_data)
-                logging.info("SQL EXEC: %s", _lazymog(conn, sql_str, params))
+                LOG.info("SQL EXEC: %s", sql_str)
                 await conn.execute(sql_str, params)
 
     async def load_snapshots(self, query: Predicate = None) -> Iterable[AggregateBase]:
@@ -289,7 +285,7 @@ class PostgreSQLStorage:
                 )
                 if where_clause is not None:
                     sql_str += f" WHERE {where_clause}"
-            logging.info("SQL QUERY: %s", _lazymog(conn, sql_str, params))
+            LOG.info("SQL QUERY: %s", sql_str)
             await conn.execute(sql_str, params)
             async for row in conn:
                 snap = AggregateMeta.construct_named(row[0], row[1])

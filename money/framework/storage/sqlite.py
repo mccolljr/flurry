@@ -17,6 +17,8 @@ from money.framework.storage.utils import (
     visit_predicate,
 )
 
+LOG = logging.getLogger("sqlite")
+
 
 class _SqliteSimplifier(PredicateSQLSimplifier):
     def __init__(self, type_field: str, data_field: str):
@@ -96,7 +98,7 @@ class SqliteStorage:
                 )
                 if where_clause is not None:
                     sql_str += f" WHERE {where_clause}"
-            logging.info("SQL QUERY: %s / %s", sql_str, params)
+            LOG.info("SQL QUERY: %s", sql_str)
             loaded = await conn.execute(sql_str, params)
             async for row in loaded:
                 evt = EventMeta.construct_named(row[0], json.loads(row[1]))
@@ -107,6 +109,8 @@ class SqliteStorage:
     async def save_events(self, events: Iterable[EventBase]):
         await self.__ensure_setup()
         async with self.__conn() as conn:
+
+            sql_str = "INSERT INTO __events (event_type, event_data) values (?, ?)"
             params = [
                 (
                     evt.__class__.__name__,
@@ -114,9 +118,8 @@ class SqliteStorage:
                 )
                 for evt in events
             ]
-            await conn.executemany(
-                "INSERT INTO __events (event_type, event_data) values (?, ?)", params
-            )
+            LOG.info("SQL EXEC: %s", sql_str)
+            await conn.executemany(sql_str, params)
             await conn.commit()
 
     async def save_snapshots(self, snaps: Iterable[AggregateBase]):
@@ -126,15 +129,14 @@ class SqliteStorage:
                 snap_typ = type(snap)
                 snap_id = f"{snap_typ.__name__}:{getattr(snap, snap_typ.__agg_id__)}"
                 snap_data = json.dumps(snap.to_dict(), cls=self.JSONDataEncoder)
-                await conn.execute(
-                    """
-                    INSERT INTO __snapshots (aggregate_id, aggregate_type, aggregate_data)
-                        VALUES (?,?,?)
-                        ON CONFLICT(aggregate_id) DO UPDATE SET
-                            aggregate_data=excluded.aggregate_data;
-                    """,
-                    (snap_id, snap_typ.__name__, snap_data),
-                )
+                sql_str = """
+                INSERT INTO __snapshots (aggregate_id, aggregate_type, aggregate_data)
+                    VALUES (?,?,?)
+                    ON CONFLICT(aggregate_id) DO UPDATE SET
+                        aggregate_data=excluded.aggregate_data;
+                """
+                LOG.info("SQL EXEC: %s", sql_str)
+                await conn.execute(sql_str, (snap_id, snap_typ.__name__, snap_data))
             await conn.commit()
 
     async def load_snapshots(self, query: Predicate = None) -> Iterable[AggregateBase]:
@@ -149,7 +151,7 @@ class SqliteStorage:
                 )
                 if where_clause is not None:
                     sql_str += f" WHERE {where_clause}"
-            logging.info("SQL QUERY: %s / %s", sql_str, params)
+            LOG.info("SQL QUERY: %s", sql_str)
             loaded = await conn.execute(sql_str, params)
             async for row in loaded:
                 snap = AggregateMeta.construct_named(row[0], json.loads(row[1]))
