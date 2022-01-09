@@ -20,12 +20,27 @@ value as specified by
 """
 scalar DateTime
 
+input ArgumentsInput {
+  username: String!
+}
+
 type QueryRoot {
   FindUserByUsername(username: String!): FindUserByUsernameResult
+  EchoUser(wholeUser: ArgumentsInput = null): EchoUserResult
 }
 
 type FindUserByUsernameResult {
   user: UserAggregate
+}
+
+type EchoUserResult {
+  uuid: String!
+  firstName: String!
+  lastName: String!
+  username: String!
+  email: String!
+  hashedPassword: String!
+  lastLogin: DateTime
 }
 
 type MutationRoot {

@@ -8,14 +8,14 @@ from typing import Dict, List, cast
 
 import money.framework.schema as schema
 import money.framework.predicate as P
-from money.framework.application import GraphQLApplication
+from money.framework.application import GraphqlApplication
 from money.framework.aggregate import AggregateBase
 from money.framework.command import CommandBase
 from money.framework.query import QueryBase
 from money.framework.event import EventBase, handle_event
 from money.framework.storage import MemoryStorage, Storage
 
-app = GraphQLApplication(storage=MemoryStorage())
+app = GraphqlApplication(storage=MemoryStorage())
 
 
 class TodoEvent(EventBase):

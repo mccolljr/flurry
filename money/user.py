@@ -113,6 +113,21 @@ class FindUserByUsername(QueryBase):
         )
 
 
+@APP.query
+class EchoUser(QueryBase):
+    class Arguments(schema.SimpleSchema):
+        whole_user = schema.Field(
+            schema.Object(FindUserByUsername.Arguments), nullable=True
+        )
+
+    Result = UserAggregate
+
+    async def fetch(
+        self, storage: Storage, args: Arguments = Arguments()
+    ) -> UserAggregate:
+        return self.Result.__new__(self.Result)
+
+
 @APP.command
 class CreateUserCommand(CommandBase):
     first_name = schema.Field(schema.Str, nullable=False)

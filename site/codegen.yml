@@ -1,0 +1,29 @@
+schema: ../schema.gql
+documents:
+  - "./src/graphql/operations.gql"
+config:
+  scalars:
+    ID: "string"
+    String: "string"
+    Boolean: "boolean"
+    Int: "number"
+    Float: "number"
+    DateTime: "string"
+generates:
+  "./src/gql-types.ts":
+    config:
+      strictScalars: true
+      typesPrefix: ""
+      typesSuffix: ""
+      skipTypename: true
+      useTypeImports: true
+      dedupeFragments: true
+      declarationKind: "interface"
+      inputMaybeValue: T | null
+      maybeValue: T | null
+      immutableTypes: true
+      avoidOptionals: true
+      onlyOperationTypes: true
+    plugins:
+      - typescript
+      - typescript-operations
