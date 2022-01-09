@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 import uuid
 import bcrypt
 
@@ -116,9 +115,7 @@ class FindUserByUsername(QueryBase):
 @APP.query
 class EchoUser(QueryBase):
     class Arguments(schema.SimpleSchema):
-        whole_user = schema.Field(
-            schema.Object(FindUserByUsername.Arguments), nullable=True
-        )
+        whole_user = schema.Field(schema.Object(UserAggregate), nullable=True)
 
     Result = UserAggregate
 

@@ -1,4 +1,5 @@
 import os
+import sys
 import atexit
 import logging
 
@@ -29,5 +30,5 @@ def write_schema():
 
 if __name__ == "__main__":
     atexit.register(lambda: print("===== EXITING ====="))
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO, force=True)
     main()

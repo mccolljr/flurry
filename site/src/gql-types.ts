@@ -18,8 +18,14 @@ export interface Scalars {
   DateTime: string;
 }
 
-export interface ArgumentsInput {
+export interface UserAggregateInput {
+  readonly email: Scalars['String'];
+  readonly firstName: Scalars['String'];
+  readonly hashedPassword: Scalars['String'];
+  readonly lastLogin: InputMaybe<Scalars['DateTime']>;
+  readonly lastName: Scalars['String'];
   readonly username: Scalars['String'];
+  readonly uuid: Scalars['String'];
 }
 
 export type LoadUserQueryVariables = Exact<{

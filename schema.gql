@@ -20,13 +20,19 @@ value as specified by
 """
 scalar DateTime
 
-input ArgumentsInput {
+input UserAggregateInput {
+  uuid: String!
+  firstName: String!
+  lastName: String!
   username: String!
+  email: String!
+  hashedPassword: String!
+  lastLogin: DateTime = null
 }
 
 type QueryRoot {
   FindUserByUsername(username: String!): FindUserByUsernameResult
-  EchoUser(wholeUser: ArgumentsInput = null): EchoUserResult
+  EchoUser(wholeUser: UserAggregateInput = null): EchoUserResult
 }
 
 type FindUserByUsernameResult {
