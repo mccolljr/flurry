@@ -10,81 +10,32 @@ tasks:
     - task: install
     - task: test
 
-  install:api:
+  install:
     - if [ -z "$(which poetry)" ]; then pip install -r requirements.txt; fi
     - poetry install
-    # - touch .venv/lib/python3.10/site-packages/aiopg/py.typed
-
-  install:site:
-    dir: site
-    cmds:
-      - yarn install
-
-  install:
-    - task: install:api
-    - task: install:site
-
-  generate:api:
-    - python -m money --write-schema-only
-
-  generate:site:
-    dir: site
-    cmds:
-      - yarn generate
-
-  generate:
-    - task: generate:api
-    - task: generate:site
-
-  lint:api:
-    - mypy
-    - pylint --rcfile=pyproject.toml money.framework
-
-  lint:site:
-    - echo "no lints for site"
 
   lint:
-    - task: lint:api
-    - task: lint:site
+    - mypy
+    - pylint --rcfile=pyproject.toml money
 
-  test:api:
-    - defer: { task: stop:postgres }
-    - task: start:postgres
+  test:
+    - defer: { task: postgres:stop }
+    - task: postgres:start
     - echo "waiting for database"
     - sleep 2
     - echo "running tests"
     - pytest -s --log-cli-level=INFO {{.CLI_ARGS}}
-    - task: lint:api
+    - task: lint
 
-  test:site:
-    - echo "no tests for site"
-    - task: lint:site
+  postgres:build:
+    - docker build --tag money_pg:plpython3 - < Dockerfile.pg
 
-  test:
-    - task: test:api
-    - task: test:site
+  postgres:start:
+    - docker run -d -t -i
+      --name money_pg_test
+      -e POSTGRES_PASSWORD=unsafe
+      -p 5432:5432
+      money_pg:plpython3
 
-  start:api:
-    env:
-      PORT: 8080
-      HOST: "localhost"
-    cmds:
-      - python -m money
-
-  start:site:
-    dir: site
-    env:
-      PORT: 9090
-      HOST: "localhost"
-    cmds:
-      - PORT=9090 yarn dev
-
-  start:postgres:
-    - docker-compose up --detach postgres
-
-  stop:postgres:
-    - docker-compose down
-
-  start:docker:
-    - defer: docker-compose down
-    - docker-compose up --remove-orphans
+  postgres:stop:
+    - docker rm -f money_pg_test

@@ -6,8 +6,4 @@
 **/__pycache__/
 **/.mypy_cache
 **/.pytest_cache
-
-# node & node_modules
-**/node_modules/
-**/build
 **/*.log
