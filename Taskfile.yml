@@ -7,6 +7,13 @@ env:
 
 tasks:
   default:
+    - |
+      if [ ! -d ".venv" ]; then
+        echo "Creating a new virtual environment @ ./.venv"
+        python -m venv .venv;
+        echo "Run 'source .venv/bin/activate' and then try again"
+        exit 1
+      fi
     - task: install
     - task: test
 
