@@ -13,7 +13,7 @@ tasks:
   install:api:
     - if [ -z "$(which poetry)" ]; then pip install -r requirements.txt; fi
     - poetry install
-    - touch .venv/lib/python3.10/site-packages/aiopg/py.typed
+    # - touch .venv/lib/python3.10/site-packages/aiopg/py.typed
 
   install:site:
     dir: site
