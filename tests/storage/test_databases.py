@@ -1,12 +1,20 @@
+import os
 import pytest
 import aiopg  # type: ignore
 import asyncio
 import datetime as dt
 
 from money import schema, predicate as P
-from money.event import EventBase, handle_event
-from money.aggregate import AggregateBase
-from money.storage.postgres import PostgreSQLStorage
+from money.event import EventBase, EventMeta, handle_event
+from money.storage import SqliteStorage, PostgreSQLStorage
+from money.aggregate import AggregateBase, AggregateMeta
+
+
+@pytest.fixture(autouse=True)
+def unregister_names_and_stuff():
+    yield
+    setattr(EventMeta, "_EventMeta__by_name", {})
+    setattr(AggregateMeta, "_AggregateMeta__by_name", {})
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -22,6 +30,7 @@ def initial_dbsetup():
         async with aiopg.connect(dsn) as conn:
             async with await conn.cursor() as cur:
                 await cur.execute("DROP DATABASE IF EXISTS test;")
+        os.remove("test.db")
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -70,8 +79,24 @@ class _TestAggregateBase(AggregateBase):
         return self.__repr__()
 
 
+@pytest.mark.parametrize(
+    ["storage"],
+    [
+        (
+            PostgreSQLStorage(
+                host="localhost",
+                port="5432",
+                user="postgres",
+                password="unsafe",
+                database="test",
+            ),
+        ),
+        (SqliteStorage("test.db"),),
+    ],
+    ids=["postgres", "sqlite"],
+)
 @pytest.mark.asyncio
-async def test_postgresql_storage():
+async def test_database_backed_storage(storage):
     class E1(_TestEventBase):
         a = schema.Field(schema.Str, nullable=False)
         b = schema.Field(schema.Str, nullable=False)
@@ -106,14 +131,6 @@ async def test_postgresql_storage():
         def handle_create(self, e: _TestEventBase):
             pass
 
-    storage = PostgreSQLStorage(
-        host="localhost",
-        port=5432,
-        user="postgres",
-        password="unsafe",
-        database="test",
-    )
-
     event_1 = E1(a="a", b="p")
     event_2 = E1(a="z", b="q")
     event_3 = E2(x=100, y=200)
@@ -141,7 +158,7 @@ async def test_postgresql_storage():
         assert got_events == [event_1]
 
         got_events = await storage.load_events(P.Where(a=P.NotEq("a")))
-        assert got_events == [event_2]
+        assert got_events == [event_2, event_3, event_4]
 
         got_events = await storage.load_events(P.Where(x=100))
         assert got_events == [event_3]
@@ -205,6 +222,9 @@ async def test_postgresql_storage():
         assert got_aggs == [agg_1, agg_2]
 
         got_aggs = await storage.load_snapshots(P.Where(created_at=P.OneOf(t1, t2)))
+        assert got_aggs == [agg_1, agg_2]
+
+        got_aggs = await storage.load_snapshots(P.Where(no_such_field=P.NotEq(t1)))
         assert got_aggs == [agg_1, agg_2]
 
     finally:

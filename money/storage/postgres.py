@@ -77,18 +77,29 @@ class _PostgreSQLSimplifier(PredicateSQLSimplifier):
     def _smart_query(
         self, field: str, oper: str, val: Any
     ) -> Tuple[str, Iterable[Any]]:
+        is_negation = oper in ("<>", "!=")
         if isinstance(val, (str, int, float, bool)):
+            if is_negation:
+                return (
+                    f"coalesce({self.data_field}->{self._ph()} {oper} {self._ph()}::jsonb, true)",
+                    (field, _pgjson.dumps(val)),
+                )
             return (
-                f"{self.data_field}->{self._ph()} {oper} {self._ph()}::jsonb",
-                (field, _pgjson.dumps(val)),
+                f"({self.data_field} ? {self._ph()} AND {self.data_field}->{self._ph()} {oper} {self._ph()}::jsonb)",
+                (field, field, _pgjson.dumps(val)),
             )
         if isinstance(val, dt.datetime):
             field_as_timestamp_tz = self.timestamp_convert.format(
                 f"{self.data_field}->>{self._ph()}"
             )
+            if is_negation:
+                return (
+                    f"coalesce({field_as_timestamp_tz} {oper} {self._ph()}::timestamp, true)",
+                    (field, val.isoformat()),
+                )
             return (
-                f"{field_as_timestamp_tz} {oper} {self._ph()}::timestamp",
-                (field, val.isoformat()),
+                f"({self.data_field} ? {self._ph()} AND {field_as_timestamp_tz} {oper} {self._ph()}::timestamp)",
+                (field, field, val.isoformat()),
             )
         raise RuntimeError(f"unsupported value type {type(val).__name__}")
 
@@ -97,7 +108,7 @@ class _PostgreSQLSimplifier(PredicateSQLSimplifier):
         return (None, query, params)
 
     def on_not_eq(self, field: str, p_neq: P.NotEq) -> SimplifiedPredicate:
-        query, params = self._smart_query(field, "<>", p_neq.expect)
+        query, params = self._smart_query(field, "<>", p_neq.value)
         return (None, query, params)
 
     def on_less(self, field: str, p_less: P.Less) -> SimplifiedPredicate:
@@ -194,7 +205,10 @@ class PostgreSQLStorage:
                                     RETURNS timestamp with time zone
                                 AS $$
                                     from datetime import datetime
-                                    return datetime.fromisoformat(raw)
+                                    try:
+                                        return datetime.fromisoformat(raw)
+                                    except Exception:
+                                        return None
                                 $$ LANGUAGE plpython3u;
                                 """
                             )

@@ -189,7 +189,7 @@ class FieldPredicate(ABC):
             if name == "eq":
                 return Eq(FieldPredicate.__decode_value(val))
             if name == "not_eq":
-                return Eq(FieldPredicate.__decode_value(val))
+                return NotEq(FieldPredicate.__decode_value(val))
             if name == "less":
                 return Less(FieldPredicate.__decode_value(val))
             if name == "more":
@@ -232,16 +232,17 @@ class Eq(FieldPredicate):
 class NotEq(FieldPredicate):
     """Checks that a field value is not equal to a value."""
 
-    __slots__ = ("expect",)
+    __slots__ = ("value",)
 
-    def __init__(self, expect: Any):
-        self.expect = expect
+    def __init__(self, value: Any):
+        self.value = value
 
     def __call__(self, value: Any) -> bool:
-        return value != self.expect
+        print(f"comparing {value} to {self.value} for neq")
+        return value != self.value
 
     def to_dict(self):
-        return {"not_eq": self.expect}
+        return {"not_eq": self.value}
 
 
 class OneOf(FieldPredicate):
@@ -268,7 +269,7 @@ class Less(FieldPredicate):
         self.limit = limit
 
     def __call__(self, value: Any) -> bool:
-        return value < self.limit
+        return value is not None and value < self.limit
 
     def to_dict(self):
         return {"less": self.limit}
@@ -283,7 +284,7 @@ class More(FieldPredicate):
         self.limit = limit
 
     def __call__(self, value: Any) -> bool:
-        return value > self.limit
+        return value is not None and value > self.limit
 
     def to_dict(self):
         return {"more": self.limit}
@@ -298,7 +299,7 @@ class LessEq(FieldPredicate):
         self.limit = limit
 
     def __call__(self, value: Any) -> bool:
-        return value <= self.limit
+        return value is not None and value <= self.limit
 
     def to_dict(self):
         return {"less_eq": self.limit}
@@ -313,7 +314,7 @@ class MoreEq(FieldPredicate):
         self.limit = limit
 
     def __call__(self, value: Any) -> bool:
-        return value >= self.limit
+        return value is not None and value >= self.limit
 
     def to_dict(self):
         return {"more_eq": self.limit}
@@ -329,7 +330,7 @@ class Between(FieldPredicate):
         self.lower = lower
 
     def __call__(self, value: Any) -> bool:
-        return self.lower <= value <= self.upper
+        return value is not None and self.lower <= value <= self.upper
 
     def to_dict(self):
         return {"between": [self.lower, self.upper]}

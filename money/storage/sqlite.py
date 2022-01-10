@@ -1,7 +1,8 @@
 """Sqlite3 storage solution."""
 
 from __future__ import annotations
-from typing import Iterable, List
+from typing import AsyncGenerator, Iterable, List
+from contextlib import asynccontextmanager
 
 import json
 import logging
@@ -28,7 +29,7 @@ class _SqliteSimplifier(PredicateSQLSimplifier):
         self.data_field = data_field
 
     def on_is(self, p_is: P.Is) -> SimplifiedPredicate:
-        clause = f"({', '.join('?' for _ in p_is.types)})"
+        clause = f"{self.type_field} IN ({', '.join('?' for _ in p_is.types)})"
         params = [t.__name__ if isinstance(t, type) else str(t) for t in p_is.types]
         return None, clause, params
 
@@ -89,6 +90,20 @@ class SqliteStorage:
                 """
             )
             await conn.commit()
+
+    @asynccontextmanager
+    async def get_cursor(self) -> AsyncGenerator[aiosqlite.Cursor, None]:
+        """Get a transaction cursor for the underlying connection."""
+        await self.__ensure_setup()
+        async with self.__conn() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute("BEGIN;")
+                try:
+                    yield cur
+                    await cur.execute("COMMIT;")
+                except Exception:
+                    await cur.execute("ROLLBACK;")
+                    raise
 
     async def load_events(self, query: Predicate = None) -> Iterable[EventBase]:
         """Load events that match the predicate."""
