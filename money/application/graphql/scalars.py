@@ -1,3 +1,5 @@
+"""Custom graphql scalars."""
+
 import json
 from typing import Any, Dict, List, overload
 import graphene
@@ -11,10 +13,12 @@ class JSONScalar(graphene.Scalar):
 
     @staticmethod
     def serialize(value):
+        """Serialize the value to a graphql string."""
         return json.dumps(value)
 
     @staticmethod
     def parse_literal(ast: gqlast.Node):
+        """Parse a value from a graphql literal."""
         if isinstance(ast, gqlast.StringValueNode):
             return json.loads(ast.value)
         raise ValueError("invalid JSON")
@@ -25,6 +29,7 @@ class PredicateScalar(graphene.Scalar):
 
     @staticmethod
     def serialize(value):
+        """Serialize the value to a graphql string."""
         if isinstance(value, P.Predicate):
             return PredicateScalar._serialize_toplevel(value)
         raise ValueError(f"cannot serialize {value} as Predicate scalar")
@@ -84,6 +89,7 @@ class PredicateScalar(graphene.Scalar):
 
     @staticmethod
     def parse_literal(ast: gqlast.Node):
+        """Parse a value from a graphql literal."""
         if isinstance(ast, gqlast.ObjectValueNode):
             return P.Predicate.from_dict(PredicateScalar._node_to_value(ast))
 

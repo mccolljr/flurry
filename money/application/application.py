@@ -1,3 +1,5 @@
+"""The core Application type."""
+
 import logging
 from typing import Iterable, List, Tuple, TypeVar, Union
 
@@ -17,11 +19,10 @@ LOG = logging.getLogger("application")
 
 class Application:
     """Application is the core type for applications using the framework.
-    It is responsible for registering events, queries, commands, aggregates,
-    modules, etc.
 
-    By itself, an Application doesn't know how to run a web server or handle requests.
-    This behavior is delegated to subclasses of Application.
+    The base class handles registration of events, queries, commands,
+    aggregates, modules, etc. Subclasses are responsible for providing
+    network interfaces and the like.
     """
 
     _events: List[EventMeta]
@@ -30,6 +31,7 @@ class Application:
     _aggregates: List[AggregateMeta]
 
     def __init__(self):
+        """Initialize the application data."""
         self._events = []
         self._queries = []
         self._commands = []
@@ -38,21 +40,25 @@ class Application:
         self._creation_events = {}
 
     def event(self, evt: TEventMeta) -> TEventMeta:
+        """Register an event type."""
         self._events.append(evt)
         LOG.info("application event: %s", evt.__name__)
         return evt
 
     def query(self, qry: TQueryMeta) -> TQueryMeta:
+        """Register a query type."""
         self._queries.append(qry)
         LOG.info("application query: %s", qry.__name__)
         return qry
 
     def command(self, cmd: TCommandMeta) -> TCommandMeta:
+        """Register a command type."""
         self._commands.append(cmd)
         LOG.info("application command: %s", cmd.__name__)
         return cmd
 
     def aggregate(self, agg: TAggregateMeta) -> TAggregateMeta:
+        """Register an aggregate type."""
         self._aggregates.append(agg)
         for evt_class in agg.__agg_events__:
             self._related_events.setdefault(evt_class, []).append(agg)
@@ -64,7 +70,8 @@ class Application:
         self,
         *imports: Union[str, Iterable[str], Tuple[str, str], Tuple[str, Iterable[str]]],
     ):
-        """
+        """Register a full python module.
+
         You may want to define different components of your app in separate files.
         The `register_modules` method informs the app of these module locations, and
         the app will import them. If the imported module defines a `register_module`

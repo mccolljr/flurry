@@ -1,3 +1,5 @@
+"""Queries, the Q in CQRS."""
+
 from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 
@@ -8,9 +10,10 @@ from money.storage import Storage
 
 
 class QueryDefinitionError(Exception):
-    """An exception caused by an invalid query class definition"""
+    """An exception caused by an invalid query class definition."""
 
     def __init__(self, query_name: str, problem: str):
+        """Initialize a new QueryDefinitionError."""
         self.query_name = query_name
         self.problem = problem
         super().__init__(f"{self.query_name}: {self.problem}")
@@ -25,13 +28,17 @@ class QueryMeta(ABCMeta):
     fetch: Callable[[QueryBase, Any], Any]
 
     def __new__(
-        cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any], **kwargs
+        cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any], **extra
     ):
-        attrs.setdefault("__query_mixin__", False)
+        """Construct a new Query class."""
+        attrs.setdefault("__query_mixin__", extra.pop("mixin", False))
         mewcls = super().__new__(cls, name, bases, attrs)
         return mewcls
 
-    def __init__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
+    def __init__(
+        cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any], **_extra
+    ):
+        """Initialize and validate a newly created Query class."""
         super().__init__(name, bases, attrs)
         if not cls.__query_mixin__:
             QueryMeta._validate_fetch(cls)
@@ -91,13 +98,5 @@ class QueryBase(Generic[TQueryArgs, TQueryResult], metaclass=QueryMeta):
 
     @abstractmethod
     async def fetch(self, storage: Storage, args: TQueryArgs) -> TQueryResult:
-        """Subclasses must implement a fetch method
-
-        Args:
-            storage (Storage): The app storage
-            args (Arguments, optional): The query arguments, if any (default None)
-
-        Returns:
-            Result: The query result, if any (default None)
-        """
+        """Implement the fetch operation for this query."""
         ...

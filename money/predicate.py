@@ -1,3 +1,5 @@
+"""Predicates for describing values and objects."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -8,17 +10,20 @@ from money import schema
 
 
 class Predicate(ABC):
-    "The base class for object predicates."
+    """The base class for object predicates."""
+
     __slots__: tuple = ()
 
     @abstractmethod
     def __call__(self, item: Any) -> bool:
-        pass
+        """Determine whether or not the predicate matches the item."""
 
     def __str__(self) -> str:
+        """Get the string representation of the predicate."""
         return str(self.to_dict())
 
     def __eq__(self, other: object) -> bool:
+        """Determine if the predicate is the same as another predicate."""
         if not isinstance(other, self.__class__):
             return False
         for slot in self.__slots__:
@@ -27,6 +32,7 @@ class Predicate(ABC):
         return True
 
     def __hash__(self) -> int:
+        """Get the hash of the predicate."""
         return hash(
             tuple(self.__hashable(getattr(self, slot)) for slot in self.__slots__)
         )
@@ -42,10 +48,12 @@ class Predicate(ABC):
 
     @abstractmethod
     def to_dict(self) -> Dict[str, Any]:
+        """Get the dictionary representation of the predicate."""
         ...
 
     @staticmethod
     def from_dict(src: Dict[str, Any]) -> Predicate:
+        """Rebuild a predicate from its dictionary representation."""
         if isinstance(src, dict) and len(src) == 1:
             name, val = next(iter(src.items()))
             if name == "and" and isinstance(val, list):
@@ -67,9 +75,11 @@ class And(Predicate):
     __slots__ = ("preds",)
 
     def __init__(self, *preds: Predicate):
+        """Create an And predicate."""
         self.preds = preds
 
     def __call__(self, item: Any) -> bool:
+        """Check that all sub-predicates pass."""
         return all(pred(item) for pred in self.preds)
 
     def to_dict(self) -> Dict[str, Any]:

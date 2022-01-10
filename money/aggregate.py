@@ -1,3 +1,5 @@
+"""Aggregates, data models derived from a stream of events."""
+
 from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from typing import (
@@ -24,6 +26,7 @@ class AggregateDefinitionError(Exception):
     """An exception caused by an invalid aggregate class definition."""
 
     def __init__(self, agg_name: str, problem: str):
+        """Initialize a new AggregateDefinitionError."""
         self.agg_name = agg_name
         self.problem = problem
         super().__init__(f"{self.agg_name}: {self.problem}")
@@ -43,14 +46,14 @@ class AggregateMeta(schema.SchemaMeta, ABCMeta):
     def __new__(
         cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any], **extra
     ):
-        # create aggregate metadata
-        if not attrs.setdefault("__agg_mixin__", False):
+        """Construct a new Aggregate class."""
+        if not attrs.setdefault("__agg_mixin__", extra.pop("mixin", False)):
             if name in cls.__by_name:
                 raise TypeError(f"duplicate definition for aggregate {name}")
-            attrs.setdefault("__agg_id__", "id")
+            attrs.setdefault("__agg_id__", extra.pop("id", "id"))
             attrs.setdefault("__agg_name__", name)
             attrs.setdefault("__agg_events__", {})
-            attrs.setdefault("__agg_create__", extra.get("create", None))
+            attrs.setdefault("__agg_create__", extra.pop("create", None))
         new_class = super().__new__(cls, name, bases, attrs)
         if not new_class.__agg_mixin__:
             cls.__by_name[name] = new_class
@@ -59,6 +62,8 @@ class AggregateMeta(schema.SchemaMeta, ABCMeta):
     def __init__(
         cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any], **_extra
     ):
+        """Initialize and validate a newly created Aggregate class."""
+        print(_extra)
         super().__init__(name, bases, attrs)
         if not cls.__agg_mixin__:
             AggregateMeta._validate_aggregate_id(cls)
@@ -67,6 +72,7 @@ class AggregateMeta(schema.SchemaMeta, ABCMeta):
 
     @classmethod
     def construct_named(cls, name: str, args: Dict[str, Any]) -> AggregateBase:
+        """Construct an aggregate object of the given class name with the given data."""
         return cls.__by_name[name](**args)
 
     @staticmethod
@@ -111,7 +117,13 @@ class AggregateBase(Generic[EventRoot], schema.SchemaBase, metaclass=AggregateMe
     __agg_mixin__ = True
 
     def apply_event(self, event: EventRoot):
-        handler_name = type(self).__agg_events__[type(event)]
+        """Call the appropriate handler for the given event."""
+        try:
+            handler_name = type(self).__agg_events__[type(event)]
+        except KeyError as err:
+            raise ValueError(
+                f"{type(self).__name__} has no handler for event {type(event).__name__}"
+            ) from err
         getattr(self, handler_name)(event)
 
     @classmethod
@@ -119,10 +131,12 @@ class AggregateBase(Generic[EventRoot], schema.SchemaBase, metaclass=AggregateMe
     async def load_events(
         cls, storage: Storage, ids: List[Any]
     ) -> Dict[Any, List[EventRoot]]:
+        """Load the events for aggregates of this type with the given ids."""
         ...
 
     @classmethod
     async def load(cls: Type[TAggSelf], storage: Storage, agg_id: Any) -> TAggSelf:
+        """Derive a single aggregate from the event stream."""
         loaded = await cls.load_all(storage, [agg_id])
         if not loaded:
             raise ValueError(f"no {cls.__name__} with id {agg_id}")
@@ -132,11 +146,13 @@ class AggregateBase(Generic[EventRoot], schema.SchemaBase, metaclass=AggregateMe
     async def load_all(
         cls: Type[TAggSelf], storage: Storage, ids: List[Any]
     ) -> List[TAggSelf]:
+        """Derive multiple aggregates from the event stream."""
         events = await cls.load_events(storage, ids)
         return [cls.from_events(evts) for evts in events.values()]
 
     @classmethod
     def from_events(cls: Type[TAggSelf], events: List[EventRoot]) -> TAggSelf:
+        """Derive an aggregate from a list of events."""
         if not events:
             raise ValueError(f"no {cls.__name__} with id {id}")
         if not isinstance(events[0], cls.__agg_create__):
@@ -148,5 +164,6 @@ class AggregateBase(Generic[EventRoot], schema.SchemaBase, metaclass=AggregateMe
 
     @classmethod
     async def sync_snapshots(cls: Type[TAggSelf], storage: Storage, ids: List[Any]):
+        """Derive aggregates from the event stream, then save them as snapshots."""
         snaps = await cls.load_all(storage, ids)
         await storage.save_snapshots(snaps)

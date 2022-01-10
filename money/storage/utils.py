@@ -1,3 +1,5 @@
+"""Utilities shared by storage solutions."""
+
 # pylint: disable=invalid-name
 from __future__ import annotations
 from typing import (
@@ -20,49 +22,59 @@ T = TypeVar("T", covariant=True)
 
 
 class PredicateVisitor(Protocol[T]):
-    """
-    A class with methods that can be called to process
-    individual predicates while walking a predicate tree.
-    """
+    """The interface implemented by classes that visit the parts of a Predicate."""
 
     def on_is(self, p_is: P.Is) -> T:
+        """Process the predicate."""
         ...
 
     def on_or(self, p_or: P.Or) -> T:
+        """Process the predicate."""
         ...
 
     def on_and(self, p_and: P.And) -> T:
+        """Process the predicate."""
         ...
 
     def on_where(self, p_where: P.Where) -> T:
+        """Process the predicate."""
         ...
 
     def on_eq(self, field: str, p_eq: P.Eq) -> T:
+        """Process the field predicate."""
         ...
 
     def on_not_eq(self, field: str, p_neq: P.NotEq) -> T:
+        """Process the field predicate."""
         ...
 
     def on_less(self, field: str, p_less: P.Less) -> T:
+        """Process the field predicate."""
         ...
 
     def on_more(self, field: str, p_more: P.More) -> T:
+        """Process the field predicate."""
         ...
 
     def on_less_eq(self, field: str, p_less_eq: P.LessEq) -> T:
+        """Process the field predicate."""
         ...
 
     def on_more_eq(self, field: str, p_more_eq: P.MoreEq) -> T:
+        """Process the field predicate."""
         ...
 
     def on_between(self, field: str, p_between: P.Between) -> T:
+        """Process the field predicate."""
         ...
 
     def on_one_of(self, field: str, p_one_of: P.OneOf) -> T:
+        """Process the field predicate."""
         ...
 
 
 def visit_predicate(visitor: PredicateVisitor[T], pred: Predicate) -> T:
+    """Visit the predicate and its parts of the predicate using the given visitor."""
     if isinstance(pred, P.Is):
         return visitor.on_is(pred)
     if isinstance(pred, P.Or):
@@ -77,6 +89,7 @@ def visit_predicate(visitor: PredicateVisitor[T], pred: Predicate) -> T:
 def visit_field_predicate(
     visitor: PredicateVisitor[T], field: str, pred: FieldPredicate
 ) -> T:
+    """Visit the field predicate using the given visitor."""
     if isinstance(pred, P.Eq):
         return visitor.on_eq(field, pred)
     if isinstance(pred, P.NotEq):
@@ -103,13 +116,13 @@ SimplifiedPredicate = Tuple[
 
 
 def cast_simplified_predicate(src: SimplifiedPredicate):
-    """Casts a SimplifiedPredicate value to one that explicitly deals with Predicate values."""
+    """Cast a SimplifiedPredicate value to one that explicitly deals with Predicate values."""
     pred, clause, params = src
     return cast(Optional[Predicate], pred), clause, params
 
 
 def cast_simplified_field_predicate(src: SimplifiedPredicate):
-    """Casts a SimplifiedPredicate value to one that explicitly deals with FieldPredicate values."""
+    """Cast a SimplifiedPredicate value to one that explicitly deals with FieldPredicate values."""
     pred, clause, params = src
     return cast(Optional[FieldPredicate], pred), clause, params
 
@@ -118,9 +131,11 @@ class PredicateSQLSimplifier:
     """A base class for predicate visitors that perform SQL generation."""
 
     def on_is(self, p_is: P.Is) -> SimplifiedPredicate:
+        """Do nothing."""
         return p_is, None, None
 
     def on_or(self, p_or: P.Or) -> SimplifiedPredicate:
+        """Generate SQL representing the OR of all sub-predicates."""
         items = [visit_predicate(self, p) for p in p_or.alts]
         preds: List[AnyPredicate] = []
         clauses: List[str] = []
@@ -144,6 +159,7 @@ class PredicateSQLSimplifier:
         return ret_pred, ret_clauses, ret_params
 
     def on_and(self, p_and: P.And) -> SimplifiedPredicate:
+        """Generate SQL representing the AND of all sub-predicates."""
         items = [visit_predicate(self, p) for p in p_and.preds]
         preds: List[AnyPredicate] = []
         clauses: List[str] = []
@@ -167,28 +183,37 @@ class PredicateSQLSimplifier:
         return ret_pred, ret_clauses, ret_params
 
     def on_where(self, p_where: P.Where) -> SimplifiedPredicate:
+        """Do nothing."""
         return p_where, None, None
 
     def on_eq(self, _field: str, p_eq: P.Eq) -> SimplifiedPredicate:
+        """Do nothing."""
         return p_eq, None, None
 
     def on_not_eq(self, _field: str, p_neq: P.NotEq) -> SimplifiedPredicate:
+        """Do nothing."""
         return p_neq, None, None
 
     def on_less(self, _field: str, p_less: P.Less) -> SimplifiedPredicate:
+        """Do nothing."""
         return p_less, None, None
 
     def on_more(self, _field: str, p_more: P.More) -> SimplifiedPredicate:
+        """Do nothing."""
         return p_more, None, None
 
     def on_less_eq(self, _field: str, p_less_eq: P.LessEq) -> SimplifiedPredicate:
+        """Do nothing."""
         return p_less_eq, None, None
 
     def on_more_eq(self, _field: str, p_more_eq: P.MoreEq) -> SimplifiedPredicate:
+        """Do nothing."""
         return p_more_eq, None, None
 
     def on_between(self, _field: str, p_between: P.Between) -> SimplifiedPredicate:
+        """Do nothing."""
         return p_between, None, None
 
     def on_one_of(self, _field: str, p_one_of: P.OneOf) -> SimplifiedPredicate:
+        """Do nothing."""
         return p_one_of, None, None

@@ -1,3 +1,5 @@
+"""Sqlite3 storage solution."""
+
 from __future__ import annotations
 from typing import Iterable, List
 
@@ -38,6 +40,7 @@ class SqliteStorage:
         """Provides JSON encoding for the database layer."""
 
         def default(self, o):
+            """Properly encode values, including datetime values."""
             import datetime
 
             if isinstance(o, datetime.datetime):
@@ -45,6 +48,7 @@ class SqliteStorage:
             return super().default(o)
 
     def __init__(self, db_name: str):
+        """Initialize new Sqlite3 storage using the given database file."""
         self.__setup = asyncio.Lock()
         self.__db_name = db_name
         self.__setup_done = False
@@ -87,6 +91,7 @@ class SqliteStorage:
             await conn.commit()
 
     async def load_events(self, query: Predicate = None) -> Iterable[EventBase]:
+        """Load events that match the predicate."""
         await self.__ensure_setup()
         async with self.__conn() as conn:
             events: List[EventBase] = []
@@ -107,6 +112,7 @@ class SqliteStorage:
             return events
 
     async def save_events(self, events: Iterable[EventBase]):
+        """Save new events."""
         await self.__ensure_setup()
         async with self.__conn() as conn:
 
@@ -123,6 +129,7 @@ class SqliteStorage:
             await conn.commit()
 
     async def save_snapshots(self, snaps: Iterable[AggregateBase]):
+        """Save new snapshots."""
         await self.__ensure_setup()
         async with self.__conn() as conn:
             for snap in snaps:
@@ -140,6 +147,7 @@ class SqliteStorage:
             await conn.commit()
 
     async def load_snapshots(self, query: Predicate = None) -> Iterable[AggregateBase]:
+        """Load snapshots that match the predicate."""
         await self.__ensure_setup()
         async with self.__conn() as conn:
             snaps: List[AggregateBase] = []
@@ -158,3 +166,6 @@ class SqliteStorage:
                 if query is None or query(snap):
                     snaps.append(snap)
             return snaps
+
+    async def close(self):
+        """Do nothing, unnecessary for sqlite."""

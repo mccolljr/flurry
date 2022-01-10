@@ -1,3 +1,5 @@
+"""Graphql over HTTP."""
+
 import json
 import logging
 from typing import NamedTuple
@@ -18,15 +20,17 @@ class CorsOptions(NamedTuple):
 
 
 class GraphqlApplication(Application):
-    """An Application that provides a GraphQL interface over HTTP."""
+    """An Application that provides a Graphql interface over HTTP."""
 
     def __init__(self, storage: Storage, cors_opts: CorsOptions = None):
+        """Initialize the application."""
         super().__init__()
         self.storage = storage
         self.cors_opts = cors_opts
 
     @property
     def gql_schema(self) -> graphene.Schema:
+        """Get the graphql schema serviced by this application."""
         existing = getattr(self, "__gql_schema", None)
         if existing is None:
             logging.info("building graphql schema")
@@ -36,6 +40,7 @@ class GraphqlApplication(Application):
         return existing
 
     def run(self, *, host: str = "localhost", port: int = 8080, **kwargs):
+        """Run the server."""
         logging.info("===== LISTENING ON %s:%d =====", host, port)
         web.run_app(self._setup_app(), host=host, port=port, **kwargs)
 

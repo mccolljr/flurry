@@ -1,3 +1,5 @@
+"""Commands, the C in CQRS."""
+
 from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, Generic, Optional, Tuple, TypeVar, Union
 
@@ -8,10 +10,11 @@ from money.storage import Storage
 class CommandDefinitionError(Exception):
     """An exception caused by an invalid command class definition."""
 
-    def __init__(self, query_name: str, problem: str):
-        self.query_name = query_name
+    def __init__(self, command_name: str, problem: str):
+        """Initialize a new CommandDefinitionError."""
+        self.command_name = command_name
         self.problem = problem
-        super().__init__(f"{self.query_name}: {self.problem}")
+        super().__init__(f"{self.command_name}: {self.problem}")
 
 
 class CommandMeta(schema.SchemaMeta, ABCMeta):
@@ -20,12 +23,18 @@ class CommandMeta(schema.SchemaMeta, ABCMeta):
     __cmd_mixin__: bool
     Result: Optional[schema.SchemaMeta]
 
-    def __new__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
-        attrs.setdefault("__cmd_mixin__", False)
+    def __new__(
+        cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any], **extra
+    ):
+        """Construct a new Command class."""
+        attrs.setdefault("__cmd_mixin__", extra.pop("mixin", False))
         new_class = super().__new__(cls, name, bases, attrs)
         return new_class
 
-    def __init__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
+    def __init__(
+        cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any], **_extra
+    ):
+        """Initialize and validate a newly created Command class."""
         super().__init__(name, bases, attrs)
         if not cls.__cmd_mixin__:
             CommandMeta._validate_exec(cls)
@@ -69,4 +78,5 @@ class CommandBase(Generic[TCommandResult], schema.SchemaBase, metaclass=CommandM
 
     @abstractmethod
     async def exec(self, storage: Storage) -> TCommandResult:
+        """Implement the exec operation for this command."""
         ...

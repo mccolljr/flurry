@@ -1,3 +1,5 @@
+"""PostgreSQL storage solution."""
+
 from __future__ import annotations
 from typing import (
     Any,
@@ -139,6 +141,7 @@ class PostgreSQLStorage:
     def __init__(
         self, *, host: str, port: str, user: str, password: str, database: str, **pgopts
     ):
+        """Initialize new PostgreSQL storage using the given connection."""
         self.__setup = asyncio.Lock()
         self.__dsn = (
             f"postgres://{user}:{password}@{host}:{port}/{database}"
@@ -206,6 +209,7 @@ class PostgreSQLStorage:
 
     @asynccontextmanager
     async def get_cursor(self) -> AsyncGenerator[aiopg.Cursor, None]:
+        """Get a transaction cursor for the underlying connection."""
         pool = await self.__get_pool()
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -228,6 +232,7 @@ class PostgreSQLStorage:
         )
 
     async def load_events(self, query: Predicate = None) -> Iterable[EventBase]:
+        """Load events that match the predicate."""
         async with self.get_cursor() as conn:
             events: List[EventBase] = []
             sql_str = "SELECT event_type, event_data from __events"
@@ -248,6 +253,7 @@ class PostgreSQLStorage:
             return events
 
     async def save_events(self, events: Iterable[EventBase]):
+        """Save new events."""
         async with self.get_cursor() as conn:
             sql_str = "INSERT INTO __events (event_type, event_data) values (%s, %s);"
             for evt in events:
@@ -259,6 +265,7 @@ class PostgreSQLStorage:
             LOG.info("SQL EXEC: %s", sql_str)
 
     async def save_snapshots(self, snaps: Iterable[AggregateBase]):
+        """Save new snapshots."""
         async with self.get_cursor() as conn:
             for snap in snaps:
                 snap_typ = type(snap)
@@ -275,6 +282,7 @@ class PostgreSQLStorage:
                 await conn.execute(sql_str, params)
 
     async def load_snapshots(self, query: Predicate = None) -> Iterable[AggregateBase]:
+        """Load snapshots that match the predicate."""
         async with self.get_cursor() as conn:
             snaps: List[AggregateBase] = []
             sql_str = "SELECT aggregate_type, aggregate_data from __snapshots"
@@ -295,6 +303,7 @@ class PostgreSQLStorage:
             return snaps
 
     async def close(self):
+        """Close underlying connection(s)."""
         async with self.__setup:
             if self.__pool is not None:
                 self.__pool.close()

@@ -1,3 +1,5 @@
+"""Graphql schema generation."""
+
 from __future__ import annotations
 import logging
 from inspect import isawaitable
@@ -34,29 +36,33 @@ if TYPE_CHECKING:
 
 
 class GraphqlGenerator:
-    """
-    A class capable of generating a graphql schema for the given target application.
-    """
+    """A class capable of generating a graphql schema for the given target application."""
 
     gql_types: Dict[Type[GraphQLAnyObject], Dict[str, Type[GraphQLAnyObject]]]
 
     def __init__(self, target_app: Application):
+        """Initialize a GraphqlGenerator for the target application."""
         self.target_app = target_app
         self.gql_types = {graphene.ObjectType: {}, graphene.InputObjectType: {}}
 
     def mutation_name(self, cmd: CommandMeta) -> str:
+        """Get the name of the mutation generated for this command class."""
         return cmd.__name__
 
     def mutation_result_name(self, cmd: CommandMeta) -> str:
+        """Get the name of the mutation result generated for this command class."""
         return f"{cmd.__name__}Result"
 
     def query_name(self, query: QueryMeta) -> str:
+        """Get the name of the query generated for this query class."""
         return query.__name__
 
     def query_result_name(self, query: QueryMeta) -> str:
+        """Get the name of the query result generated for this query class."""
         return f"{query.__name__}Result"
 
     def query_resolver_name(self, query: QueryMeta) -> str:
+        """Get the name of the query resolver generated for this query class."""
         return f"resolve_{query.__name__}"
 
     def field_to_graphql_field(
@@ -64,9 +70,7 @@ class GraphqlGenerator:
         field: schema.Field[Any],
         containing_type: Type[GraphQLAnyObject],
     ) -> graphene.Field:
-        """
-        Generate a graphql object field from the given Field.
-        """
+        """Generate a graphql object field from the given Field."""
         return graphene.Field(
             self.field_kind_to_graphql_kind(
                 field.kind, containing_type=containing_type
@@ -78,9 +82,7 @@ class GraphqlGenerator:
         self,
         field: schema.Field[Any],
     ) -> graphene.Argument:
-        """
-        Generate a graphql argument field from the given Field.
-        """
+        """Generate a graphql argument field from the given Field."""
         return graphene.Argument(
             self.field_kind_to_graphql_kind(
                 field.kind, containing_type=graphene.InputObjectType
@@ -91,6 +93,7 @@ class GraphqlGenerator:
     def get_graphql_object_type(
         self, source: schema.SchemaMeta, base: Type[GraphQLAnyObject]
     ) -> Type[GraphQLAnyObject]:
+        """Generate or look up the object type of the appropriate kind."""
         obj_name = source.__name__
         if base is graphene.InputObjectType:
             obj_name += "Input"
@@ -109,9 +112,7 @@ class GraphqlGenerator:
         kind: schema.FieldKind[Any],
         containing_type: Type[GraphQLAnyObject],
     ) -> GraphQLConvertedField:
-        """
-        Generate the appropriate graphql field type based on the given FieldKind.
-        """
+        """Generate the appropriate graphql field type based on the given FieldKind."""
         if isinstance(kind, schema.Str):
             return graphene.String
         if isinstance(kind, schema.Int):
@@ -143,10 +144,7 @@ class GraphqlGenerator:
         the_schema: Dict[str, schema.Field[Any]],
         object_type: Type[GraphQLAnyObject] = graphene.ObjectType,
     ) -> Type[Union[graphene.ObjectType, graphene.InputObjectType]]:
-        """
-        Generate an equivalent graphql object type class of the appropriate base
-        based on the fields in the schema.
-        """
+        """Convert a schema to a graphql object type of the appropriate kind."""
         return type(
             name,
             (object_type,),
@@ -159,9 +157,7 @@ class GraphqlGenerator:
     def generate_graphql_mutation(
         self, command: CommandMeta
     ) -> Type[graphene.Mutation]:
-        """
-        Generate the mutation for a command, including the mutation function.
-        """
+        """Generate the mutation for a command, including the mutation function."""
         mutation_result_name = self.mutation_result_name(command)
         argument_type = type(
             "Arguments",
@@ -214,10 +210,7 @@ class GraphqlGenerator:
     ) -> Tuple[
         Type[graphene.ObjectType], Dict[str, graphene.Argument], Callable[..., Any]
     ]:
-        """
-        Generate the result object type, the argument mapping, and the resolver
-        for a query.
-        """
+        """Generate the result object type, the argument mapping, and the resolver for a query."""
         result_type = type(
             self.query_result_name(query),
             (graphene.ObjectType,),
@@ -261,9 +254,7 @@ class GraphqlGenerator:
         return result_type, resolver_args, resolver_fn
 
     def generate_graphql_query_root(self) -> Type[graphene.ObjectType]:
-        """
-        Generate the schema's root mutation query type.
-        """
+        """Generate the schema's root mutation query type."""
         attrs: dict = {}
         for query in getattr(self.target_app, "_queries"):
             query_name = self.query_name(query)
@@ -275,9 +266,7 @@ class GraphqlGenerator:
         return type("QueryRoot", (graphene.ObjectType,), attrs)
 
     def generate_graphql_mutation_root(self) -> Type[graphene.ObjectType]:
-        """
-        Generate the schema's root mutation object type.
-        """
+        """Generate the schema's root mutation object type."""
         return type(
             "MutationRoot",
             (graphene.ObjectType,),
@@ -290,9 +279,7 @@ class GraphqlGenerator:
         )
 
     def collect_graphql_object_types(self):
-        """
-        Collects all of the generated input and output object types into a unified list.
-        """
+        """Collect all of the generated input and output object types into a unified list."""
         all_types: List[Type[GraphQLAnyObject]] = []
         for otyp in self.gql_types[graphene.ObjectType].values():
             all_types.append(otyp)
@@ -301,10 +288,7 @@ class GraphqlGenerator:
         return all_types
 
     def generate_schema(self) -> graphene.Schema:
-        """
-        Generates a schema from the commands, queries, etc. registered on the target
-        application.
-        """
+        """Generate a schema from the commands, queries, etc. registered on the target application."""
         gql_query = self.generate_graphql_query_root()
         gql_mutation = self.generate_graphql_mutation_root()
         gql_types = self.collect_graphql_object_types()

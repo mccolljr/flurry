@@ -17,6 +17,9 @@ tasks:
     - task: install
     - task: test
 
+  generate:
+    - python -m pydoc -p 1234 money
+
   install:
     - if [ -z "$(which poetry)" ]; then pip install -r requirements.txt; fi
     - poetry install
