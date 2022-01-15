@@ -1,0 +1,58 @@
+# https://taskfile.dev
+
+version: "3"
+
+tasks:
+  lint:
+    - poetry run mypy
+    - poetry run pylint --rcfile=pyproject.toml fete.*
+
+  test:
+    - poetry run pytest {{.CLI_ARGS}}
+
+  ci:
+    - task: lint
+    - task: test
+
+  build:
+    silent: true
+    cmds:
+      - poetry workspace run poetry build
+
+  clean:
+    silent: true
+    cmds:
+      - |
+        for dist_dir in fete*/dist; do
+          if [ -d "$dist_dir" ]; then
+            echo "removing $dist_dir"
+            rm -rf "$dist_dir";
+          fi
+        done
+
+  install:
+    silent: true
+    cmds:
+      - |
+        if [ -z "$(which poetry)" ]; then
+          pip install poetry
+        fi
+      - poetry install
+      - poetry workspace run poetry install
+
+  update:
+    - poetry update
+    - poetry workspace run poetry update
+
+  postgres:build:
+    - docker build --tag fete_postgres:plpython3 - < fete.postgres/Dockerfile.pg
+
+  postgres:start:
+    - docker run -d -t -i
+      --name fete_postgres_test
+      -e POSTGRES_PASSWORD=unsafe
+      -p 5432:5432
+      fete_postgres:plpython3
+
+  postgres:stop:
+    - docker rm -f fete_postgres_test

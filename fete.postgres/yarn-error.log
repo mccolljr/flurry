@@ -1,0 +1,36 @@
+Arguments: 
+  /Users/jmccollum/.asdf/installs/nodejs/16.13.1/bin/node /Users/jmccollum/.asdf/installs/nodejs/16.13.1/.npm/bin/yarn add aiopg
+
+PATH: 
+  /Users/jmccollum/.asdf/plugins/nodejs/shims:/Users/jmccollum/.asdf/installs/nodejs/16.13.1/.npm/bin:/Users/jmccollum/.asdf/installs/nodejs/16.13.1/bin:/Users/jmccollum/python/fete/.venv/bin:/Users/jmccollum/.asdf/shims:/usr/local/Cellar/asdf/0.8.1_1/libexec/bin:/Users/jmccollum/go/src/github.com/golang/go/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/jmccollum/go/src/github.com/golang/go/bin:/Users/jmccollum/go/bin:/Users/jmccollum/.cargo/bin:./bin:/Users/jmccollum/go/bin:/Users/jmccollum/.cargo/bin:./bin
+
+Yarn version: 
+  1.22.17
+
+Node version: 
+  16.13.1
+
+Platform: 
+  darwin x64
+
+Trace: 
+  Error: https://registry.yarnpkg.com/aiopg: Not found
+      at Request.params.callback [as _callback] (/Users/jmccollum/.asdf/installs/nodejs/16.13.1/.npm/lib/node_modules/yarn/lib/cli.js:67029:18)
+      at Request.self.callback (/Users/jmccollum/.asdf/installs/nodejs/16.13.1/.npm/lib/node_modules/yarn/lib/cli.js:140883:22)
+      at Request.emit (node:events:390:28)
+      at Request.<anonymous> (/Users/jmccollum/.asdf/installs/nodejs/16.13.1/.npm/lib/node_modules/yarn/lib/cli.js:141855:10)
+      at Request.emit (node:events:390:28)
+      at IncomingMessage.<anonymous> (/Users/jmccollum/.asdf/installs/nodejs/16.13.1/.npm/lib/node_modules/yarn/lib/cli.js:141777:12)
+      at Object.onceWrapper (node:events:509:28)
+      at IncomingMessage.emit (node:events:402:35)
+      at endReadableNT (node:internal/streams/readable:1343:12)
+      at processTicksAndRejections (node:internal/process/task_queues:83:21)
+
+npm manifest: 
+  No manifest
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile

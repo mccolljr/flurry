@@ -1,0 +1,116 @@
+# name: test_postgresql_simplify[complex]
+  <class 'tuple'> (
+    None,
+    '(type_field IN (%s, %s, %s) OR (((data_field ? %s AND data_field->%s = %s::jsonb)) AND (coalesce(data_field->%s <> %s::jsonb, true)) AND ((data_field ? %s AND data_field->%s < %s::jsonb))) OR (((data_field ? %s AND data_field->%s > %s::jsonb)) AND ((data_field ? %s AND data_field->%s <= %s::jsonb)) AND ((data_field ? %s AND data_field->%s >= %s::jsonb))) OR (((data_field ? %s AND data_field->%s >= %s::jsonb) AND (data_field ? %s AND data_field->%s <= %s::jsonb)) AND ((data_field ? %s AND data_field->%s = %s::jsonb) OR (data_field ? %s AND data_field->%s = %s::jsonb))))',
+    <class 'list'> [
+      'int',
+      'str',
+      'float',
+      'a',
+      'a',
+      '1',
+      'b',
+      '2',
+      'c',
+      'c',
+      '3',
+      'd',
+      'd',
+      '4',
+      'e',
+      'e',
+      '5',
+      'f',
+      'f',
+      '6',
+      'g',
+      'g',
+      '7',
+      'g',
+      'g',
+      '8',
+      'h',
+      'h',
+      '9',
+      'h',
+      'h',
+      '10',
+    ],
+  )
+---
+# name: test_postgresql_simplify[simple_and]
+  <class 'tuple'> (
+    None,
+    '(((data_field ? %s AND data_field->%s = %s::jsonb)) AND ((data_field ? %s AND data_field->%s = %s::jsonb)))',
+    <class 'list'> [
+      'a',
+      'a',
+      '1',
+      'b',
+      'b',
+      '2',
+    ],
+  )
+---
+# name: test_postgresql_simplify[simple_is]
+  <class 'tuple'> (
+    None,
+    'type_field IN (%s, %s, %s)',
+    <class 'list'> [
+      'str',
+      'int',
+      'float',
+    ],
+  )
+---
+# name: test_postgresql_simplify[simple_or]
+  <class 'tuple'> (
+    None,
+    '(((data_field ? %s AND data_field->%s = %s::jsonb)) OR ((data_field ? %s AND data_field->%s = %s::jsonb)))',
+    <class 'list'> [
+      'a',
+      'a',
+      '1',
+      'b',
+      'b',
+      '2',
+    ],
+  )
+---
+# name: test_postgresql_simplify[simple_where]
+  <class 'tuple'> (
+    None,
+    '((data_field ? %s AND data_field->%s = %s::jsonb) AND coalesce(data_field->%s <> %s::jsonb, true) AND (data_field ? %s AND data_field->%s < %s::jsonb) AND (data_field ? %s AND data_field->%s > %s::jsonb) AND (data_field ? %s AND data_field->%s <= %s::jsonb) AND (data_field ? %s AND data_field->%s >= %s::jsonb) AND ((data_field ? %s AND data_field->%s >= %s::jsonb) AND (data_field ? %s AND data_field->%s <= %s::jsonb)) AND ((data_field ? %s AND data_field->%s = %s::jsonb) OR (data_field ? %s AND data_field->%s = %s::jsonb)))',
+    <class 'list'> [
+      'a',
+      'a',
+      '1',
+      'b',
+      '2',
+      'c',
+      'c',
+      '3',
+      'd',
+      'd',
+      '4',
+      'e',
+      'e',
+      '5',
+      'f',
+      'f',
+      '6',
+      'g',
+      'g',
+      '7',
+      'g',
+      'g',
+      '8',
+      'h',
+      'h',
+      '9',
+      'h',
+      'h',
+      '10',
+    ],
+  )
+---

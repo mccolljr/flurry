@@ -1,0 +1,9 @@
+# python environment
+__pycache__/
+dist/
+
+# development environment
+.venv/
+.vscode/
+.mypy_cache/
+.pytest_cache/
