@@ -25,13 +25,8 @@ jobs:
         uses: arduino/setup-task@v1
         with:
           version: 3.10.0
-      - name: install dependencies
+      - name: install deps and run tests
         run: |
-          pip install poetry
           source .venv/bin/activate
-          task install
           task postgres:build
-      - name: run tests
-        run: |
-          source .venv/bin/activate
-          task test
+          task ci
