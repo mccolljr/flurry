@@ -11,6 +11,12 @@ tasks:
     - poetry run pytest {{.CLI_ARGS}}
 
   ci:
+    - |
+      if [ -z "$(which poetry)" ]; then
+        pip install poetry==1.2.0a2;
+        pip install poetry-workspaces==0.1.0;
+      fi
+    - task: install
     - task: lint
     - task: test
 
@@ -31,14 +37,8 @@ tasks:
         done
 
   install:
-    silent: true
-    cmds:
-      - |
-        if [ -z "$(which poetry)" ]; then
-          pip install poetry
-        fi
-      - poetry install
-      - poetry workspace run poetry install
+    - poetry install
+    - poetry workspace run poetry install
 
   update:
     - poetry update
