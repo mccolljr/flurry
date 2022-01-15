@@ -14,38 +14,47 @@ tasks:
     - poetry run pytest {{.CLI_ARGS}}
 
   ci:
-    - |
-      if [ -z "$(which poetry)" ]; then
-        pip install poetry==1.2.0a2;
-        pip install poetry-workspaces==0.1.0;
-      fi
-    - task: install
-    - task: lint
-    - task: test
+    cmds:
+      - |
+        if [ -z "$(which poetry)" ]; then
+          pip install poetry==1.1.12;
+        fi
+      - task: install
+      - task: lint
+      - task: test
+
+  for_all:
+    silent: true
+    cmds:
+      - |
+        ROOT_DIR="$(pwd)"
+        for PKG_DIR in fete.*; do
+          cd "$ROOT_DIR/$PKG_DIR";
+          echo -e "\n=====> in $PKG_DIR"
+          {{.DO_COMMAND}}
+        done
 
   build:
     silent: true
     cmds:
-      - poetry workspace run poetry build
+      - task: for_all
+        vars: { DO_COMMAND: "poetry build" }
 
   clean:
     silent: true
     cmds:
-      - |
-        for dist_dir in fete*/dist; do
-          if [ -d "$dist_dir" ]; then
-            echo "removing $dist_dir"
-            rm -rf "$dist_dir";
-          fi
-        done
+      - task: for_all
+        vars: { DO_COMMAND: "rm -rf dist/" }
 
   install:
     - poetry install
-    - poetry workspace run poetry install
+    - task: for_all
+      vars: { DO_COMMAND: "poetry install" }
 
   update:
     - poetry update
-    - poetry workspace run poetry update
+    - task: for_all
+      vars: { DO_COMMAND: "poetry update" }
 
   postgres:build:
     - docker build --tag fete_postgres:plpython3 - < fete.postgres/Dockerfile.pg

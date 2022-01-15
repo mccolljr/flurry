@@ -14,7 +14,7 @@ aiohttp-middlewares = "^1.2.1"
 "fete-core" = "^0.1.0"
 graphql-core = "<3.2.0"
 
-[tool.poetry.group.dev.dependencies]
+[tool.poetry.dev-dependencies]
 "fete-core" = { path = "../fete.core", develop = true }
 
 

@@ -45,7 +45,7 @@ python-versions = ">=3.6"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "9a49e5211ae0f45d7fa21366c3d1d5e347f4a74b1b439beaa3704c918abc5841"
+content-hash = "e6cd89f91770bfb3ac828f1398b7f7d2569a6765934234bb403ad61f45512060"
 
 [metadata.files]
 aiopg = [
