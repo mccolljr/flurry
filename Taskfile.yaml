@@ -2,6 +2,9 @@
 
 version: "3"
 
+env:
+  TZ: America/New_York
+
 tasks:
   lint:
     - poetry run mypy
