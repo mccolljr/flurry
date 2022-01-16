@@ -181,7 +181,7 @@ class GraphqlGenerator:
         async def mutate(_root: Any, info: graphene.ResolveInfo, **kwargs):
             try:
                 command_inst = command(**kwargs)
-                result = command_inst.exec(storage=info.context.storage)
+                result = command_inst.exec(info.context.context)
                 if isawaitable(result):
                     result = await result
                 if custom_results:

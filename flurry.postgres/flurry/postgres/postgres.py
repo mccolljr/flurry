@@ -271,7 +271,7 @@ class PostgreSQLStorage:
             pool: aiopg.Pool = await aiopg.create_pool(self.__dsn)
             async with pool.acquire() as conn:
                 async with conn.cursor() as cur:
-                    self.__init_db(cur)
+                    await self.__init_db(cur)
             self.__pool = pool
             return pool
 

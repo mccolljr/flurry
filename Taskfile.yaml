@@ -18,6 +18,12 @@ tasks:
   test:
     - poetry run pytest {{.CLI_ARGS}}
 
+  test:examples:
+    - task: postgres:start
+    - defer: { task: postgres:stop }
+    - sleep 5
+    - python examples/todo/test_todo.py
+
   ci:
     cmds:
       - |
@@ -27,6 +33,7 @@ tasks:
       - task: install
       - task: lint
       - task: test
+      - task: test:examples
 
   for_all:
     silent: true
@@ -73,7 +80,7 @@ tasks:
     - docker run -d -t -i
       --name flurry_postgres_test
       -e POSTGRES_PASSWORD=unsafe
-      -p 5432:5432
+      -p 31415:5432
       flurry_postgres:plpython3
 
   postgres:stop:
