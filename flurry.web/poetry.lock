@@ -22,10 +22,10 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "35e21fedf421fa96d282e6128a49d26eb6db9ae6f56cc883ff7b2d0faf4075d0"
+content-hash = "8ca9e3613b1c7d783599c53f1c0ada51f26071ae40f120ec5c685bd1c2ebe332"
 
 [metadata.files]
 flurry-core = []
 stringcase = [
-    { file = "stringcase-1.2.0.tar.gz", hash = "sha256:48a06980661908efe8d9d34eab2b6c13aefa2163b3ced26972902e3bdfd87008" },
+    {file = "stringcase-1.2.0.tar.gz", hash = "sha256:48a06980661908efe8d9d34eab2b6c13aefa2163b3ced26972902e3bdfd87008"},
 ]

@@ -6,6 +6,11 @@ env:
   TZ: America/New_York
 
 tasks:
+  default:
+    cmds:
+      - task: ci
+    silent: true
+
   lint:
     - poetry run mypy
     - poetry run pylint --rcfile=pyproject.toml flurry.*
