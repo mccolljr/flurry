@@ -1,7 +1,7 @@
 import pytest
 import asyncio
 
-from fete.postgres.postgres import _rwlock
+from flurry.postgres.postgres import _rwlock
 
 
 @pytest.mark.asyncio

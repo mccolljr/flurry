@@ -1,12 +1,12 @@
 import pytest
 
-from fete.core import schema
-from fete.core.aggregate import (
+from flurry.core import schema
+from flurry.core.aggregate import (
     AggregateMeta,
     AggregateBase,
     AggregateDefinitionError,
 )
-from fete.core.event import EventMeta, EventBase, EventHandler, handle_event
+from flurry.core.event import EventMeta, EventBase, EventHandler, handle_event
 
 
 @pytest.fixture(autouse=True)

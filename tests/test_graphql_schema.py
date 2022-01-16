@@ -1,10 +1,10 @@
 from typing import cast
 
-from fete.core import schema
-from fete.graphql import GraphqlApplication
-from fete.core.query import QueryBase
-from fete.core.context import Context
-from fete.core.command import CommandBase
+from flurry.core import schema
+from flurry.graphql import GraphqlApplication
+from flurry.core.query import QueryBase
+from flurry.core.context import Context
+from flurry.core.command import CommandBase
 
 _APP = GraphqlApplication(cast(Context, None))
 

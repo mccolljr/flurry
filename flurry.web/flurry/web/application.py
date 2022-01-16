@@ -19,12 +19,12 @@ import logging
 import stringcase  # type: ignore
 from aiohttp import web as _web_
 
-from fete.core import schema
-from fete.core.context import Context
-from fete.core.application import Application
-from fete.core.query import QueryBase, QueryMeta
-from fete.core.schema import SchemaBase, SchemaMeta
-from fete.core.command import CommandBase, CommandMeta
+from flurry.core import schema
+from flurry.core.context import Context
+from flurry.core.application import Application
+from flurry.core.query import QueryBase, QueryMeta
+from flurry.core.schema import SchemaBase, SchemaMeta
+from flurry.core.command import CommandBase, CommandMeta
 
 
 # pylint: disable=invalid-name

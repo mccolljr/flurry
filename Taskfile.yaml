@@ -8,7 +8,7 @@ env:
 tasks:
   lint:
     - poetry run mypy
-    - poetry run pylint --rcfile=pyproject.toml fete.*
+    - poetry run pylint --rcfile=pyproject.toml flurry.*
 
   test:
     - poetry run pytest {{.CLI_ARGS}}
@@ -28,7 +28,7 @@ tasks:
     cmds:
       - |
         ROOT_DIR="$(pwd)"
-        for PKG_DIR in fete.*; do
+        for PKG_DIR in flurry.*; do
           cd "$ROOT_DIR/$PKG_DIR";
           echo -e "\n=====> in $PKG_DIR"
           {{.DO_COMMAND}}
@@ -56,15 +56,20 @@ tasks:
     - task: for_all
       vars: { DO_COMMAND: "poetry update" }
 
+  publish:
+    - task: build
+    - task: for_all
+      vars: { DO_COMMAND: "poetry publish" }
+
   postgres:build:
-    - docker build --tag fete_postgres:plpython3 - < fete.postgres/Dockerfile.pg
+    - docker build --tag flurry_postgres:plpython3 - < flurry.postgres/Dockerfile.pg
 
   postgres:start:
     - docker run -d -t -i
-      --name fete_postgres_test
+      --name flurry_postgres_test
       -e POSTGRES_PASSWORD=unsafe
       -p 5432:5432
-      fete_postgres:plpython3
+      flurry_postgres:plpython3
 
   postgres:stop:
-    - docker rm -f fete_postgres_test
+    - docker rm -f flurry_postgres_test

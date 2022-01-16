@@ -8,8 +8,8 @@ import graphene
 from aiohttp import web
 from aiohttp_middlewares.cors import cors_middleware
 
-from fete.core.context import Context
-from fete.core.application import Application
+from flurry.core.context import Context
+from flurry.core.application import Application
 
 from .generator import GraphqlGenerator
 

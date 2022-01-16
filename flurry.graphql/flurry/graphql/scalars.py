@@ -6,7 +6,7 @@ import json
 import graphene
 import graphql.language.ast as gqlast
 
-from fete.core import predicate as P
+from flurry.core import predicate as P
 
 
 class JSONScalar(graphene.Scalar):

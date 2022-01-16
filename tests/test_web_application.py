@@ -6,11 +6,11 @@ import aiohttp
 
 from contextlib import asynccontextmanager
 
-from fete.core import schema
-from fete.core.context import Context
-from fete.core.query import QueryBase
-from fete.core.command import CommandBase
-from fete.web.application import WebApplication
+from flurry.core import schema
+from flurry.core.context import Context
+from flurry.core.query import QueryBase
+from flurry.core.command import CommandBase
+from flurry.web.application import WebApplication
 
 APP = WebApplication(cast(Context, None))
 

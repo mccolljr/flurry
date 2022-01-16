@@ -1,5 +1,5 @@
 [[package]]
-name = "fete-core"
+name = "flurry-core"
 version = "0.1.0"
 description = ""
 category = "main"
@@ -9,7 +9,7 @@ develop = true
 
 [package.source]
 type = "directory"
-url = "../fete.core"
+url = "../flurry.core"
 
 [[package]]
 name = "stringcase"
@@ -25,7 +25,7 @@ python-versions = "^3.10"
 content-hash = "35e21fedf421fa96d282e6128a49d26eb6db9ae6f56cc883ff7b2d0faf4075d0"
 
 [metadata.files]
-fete-core = []
+flurry-core = []
 stringcase = [
-    {file = "stringcase-1.2.0.tar.gz", hash = "sha256:48a06980661908efe8d9d34eab2b6c13aefa2163b3ced26972902e3bdfd87008"},
+    { file = "stringcase-1.2.0.tar.gz", hash = "sha256:48a06980661908efe8d9d34eab2b6c13aefa2163b3ced26972902e3bdfd87008" },
 ]

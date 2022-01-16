@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "fete-core"
+name = "flurry-core"
 version = "0.1.0"
 description = ""
 authors = ["Jacob McCollum <jacob.r.mccollum@gmail.com>"]
 readme = "README.md"
-packages = [{ include = "fete" }]
+packages = [{ include = "flurry" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"

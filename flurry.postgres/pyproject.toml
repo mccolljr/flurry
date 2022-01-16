@@ -1,18 +1,18 @@
 [tool.poetry]
-name = "fete-postgres"
+name = "flurry-postgres"
 version = "0.1.0"
 description = ""
 authors = ["Jacob McCollum <jacob.r.mccollum@gmail.com>"]
 readme = "README.md"
-packages = [{ include = "fete" }]
+packages = [{ include = "flurry" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
 aiopg = "^1.3.3"
-"fete-core" = "^0.1.0"
+"flurry-core" = "^0.1.0"
 
 [tool.poetry.dev-dependencies]
-"fete-core" = { path = "../fete.core", develop = true }
+"flurry-core" = { path = "../flurry.core", develop = true }
 
 [build-system]
 requires = ["poetry-core"]

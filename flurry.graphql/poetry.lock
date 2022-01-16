@@ -87,7 +87,7 @@ python-versions = ">=3.5.0"
 unicode_backport = ["unicodedata2"]
 
 [[package]]
-name = "fete-core"
+name = "flurry-core"
 version = "0.1.0"
 description = ""
 category = "main"
@@ -97,7 +97,7 @@ develop = true
 
 [package.source]
 type = "directory"
-url = "../fete.core"
+url = "../flurry.core"
 
 [[package]]
 name = "frozenlist"
@@ -275,7 +275,7 @@ charset-normalizer = [
     {file = "charset-normalizer-2.0.10.tar.gz", hash = "sha256:876d180e9d7432c5d1dfd4c5d26b72f099d503e8fcc0feb7532c9289be60fcbd"},
     {file = "charset_normalizer-2.0.10-py3-none-any.whl", hash = "sha256:cb957888737fc0bbcd78e3df769addb41fd1ff8cf950dc9e7ad7793f1bf44455"},
 ]
-fete-core = []
+flurry-core = []
 frozenlist = [
     {file = "frozenlist-1.2.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:977a1438d0e0d96573fd679d291a1542097ea9f4918a8b6494b06610dfeefbf9"},
     {file = "frozenlist-1.2.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:a8d86547a5e98d9edd47c432f7a14b0c5592624b496ae9880fb6332f34af1edc"},

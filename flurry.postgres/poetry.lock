@@ -22,7 +22,7 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
-name = "fete-core"
+name = "flurry-core"
 version = "0.1.0"
 description = ""
 category = "main"
@@ -32,7 +32,7 @@ develop = true
 
 [package.source]
 type = "directory"
-url = "../fete.core"
+url = "../flurry.core"
 
 [[package]]
 name = "psycopg2-binary"
@@ -56,7 +56,7 @@ async-timeout = [
     {file = "async-timeout-4.0.2.tar.gz", hash = "sha256:2163e1640ddb52b7a8c80d0a67a08587e5d245cc9c553a74a847056bc2976b15"},
     {file = "async_timeout-4.0.2-py3-none-any.whl", hash = "sha256:8ca1e4fcf50d07413d66d1a5e416e42cfdf5851c981d679a09851a6853383b3c"},
 ]
-fete-core = []
+flurry-core = []
 psycopg2-binary = [
     {file = "psycopg2-binary-2.9.3.tar.gz", hash = "sha256:761df5313dc15da1502b21453642d7599d26be88bff659382f8f9747c7ebea4e"},
     {file = "psycopg2_binary-2.9.3-cp310-cp310-macosx_10_14_x86_64.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl", hash = "sha256:539b28661b71da7c0e428692438efbcd048ca21ea81af618d845e06ebfd29478"},

@@ -18,11 +18,11 @@ import graphene
 from inspect import isawaitable
 from graphene.types.unmountedtype import UnmountedType
 
-from fete.core import schema
+from flurry.core import schema
 
-from fete.core.query import QueryMeta
-from fete.core.command import CommandMeta
-from fete.core.application import Application
+from flurry.core.query import QueryMeta
+from flurry.core.command import CommandMeta
+from flurry.core.application import Application
 
 _GraphqlAnyObject = Union[graphene.ObjectType, graphene.InputObjectType]
 _GraphQLConvertedField = Union[

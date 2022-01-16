@@ -9,11 +9,11 @@ import asyncio
 import datetime as dt
 from contextlib import asynccontextmanager
 
-from fete.core import predicate as P
-from fete.core.event import EventBase, EventMeta
-from fete.core.predicate import Predicate
-from fete.core.aggregate import AggregateBase, AggregateMeta
-from fete.core.utils import (
+from flurry.core import predicate as P
+from flurry.core.event import EventBase, EventMeta
+from flurry.core.predicate import Predicate
+from flurry.core.aggregate import AggregateBase, AggregateMeta
+from flurry.core.utils import (
     PredicateSQLSimplifier,
     SimplifiedPredicate,
     cast_simplified_predicate,

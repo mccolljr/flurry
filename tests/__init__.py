@@ -1,3 +1,3 @@
 import sys
 
-sys.path.extend(["fete.core", "fete.graphql", "fete.postgres"])
+sys.path.extend(["flurry.core", "flurry.graphql", "flurry.postgres"])

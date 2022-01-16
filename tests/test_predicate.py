@@ -1,7 +1,7 @@
 from typing import Any, Dict
 import pytest
 
-from fete.core import predicate as P, schema
+from flurry.core import predicate as P, schema
 
 
 class First(schema.SchemaBase, metaclass=schema.SchemaMeta):

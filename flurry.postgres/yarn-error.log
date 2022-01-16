@@ -2,7 +2,7 @@ Arguments:
   /Users/jmccollum/.asdf/installs/nodejs/16.13.1/bin/node /Users/jmccollum/.asdf/installs/nodejs/16.13.1/.npm/bin/yarn add aiopg
 
 PATH: 
-  /Users/jmccollum/.asdf/plugins/nodejs/shims:/Users/jmccollum/.asdf/installs/nodejs/16.13.1/.npm/bin:/Users/jmccollum/.asdf/installs/nodejs/16.13.1/bin:/Users/jmccollum/python/fete/.venv/bin:/Users/jmccollum/.asdf/shims:/usr/local/Cellar/asdf/0.8.1_1/libexec/bin:/Users/jmccollum/go/src/github.com/golang/go/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/jmccollum/go/src/github.com/golang/go/bin:/Users/jmccollum/go/bin:/Users/jmccollum/.cargo/bin:./bin:/Users/jmccollum/go/bin:/Users/jmccollum/.cargo/bin:./bin
+  /Users/jmccollum/.asdf/plugins/nodejs/shims:/Users/jmccollum/.asdf/installs/nodejs/16.13.1/.npm/bin:/Users/jmccollum/.asdf/installs/nodejs/16.13.1/bin:/Users/jmccollum/python/flurry/.venv/bin:/Users/jmccollum/.asdf/shims:/usr/local/Cellar/asdf/0.8.1_1/libexec/bin:/Users/jmccollum/go/src/github.com/golang/go/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/jmccollum/go/src/github.com/golang/go/bin:/Users/jmccollum/go/bin:/Users/jmccollum/.cargo/bin:./bin:/Users/jmccollum/go/bin:/Users/jmccollum/.cargo/bin:./bin
 
 Yarn version: 
   1.22.17

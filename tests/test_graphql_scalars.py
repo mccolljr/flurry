@@ -2,8 +2,8 @@ import json
 import pytest
 import graphql.language.parser as gqlparse
 
-from fete.core import predicate as P
-from fete.graphql.scalars import JSONScalar, PredicateScalar
+from flurry.core import predicate as P
+from flurry.graphql.scalars import JSONScalar, PredicateScalar
 
 
 @pytest.mark.parametrize(

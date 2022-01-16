@@ -1,9 +1,9 @@
 import pytest
 
 
-from fete.core import predicate as P
-from fete.core.utils import visit_predicate
-from fete.postgres import _PostgreSQLSimplifier
+from flurry.core import predicate as P
+from flurry.core.utils import visit_predicate
+from flurry.postgres import _PostgreSQLSimplifier
 
 predicates_to_simplify = {
     "simple_and": P.And(P.Where(a=1), P.Where(b=2)),

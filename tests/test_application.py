@@ -1,10 +1,10 @@
 import uuid
 
-from fete.core import schema
-from fete.core.aggregate import AggregateBase
-from fete.core.application import Application
-from fete.core.command import CommandBase
-from fete.core.event import EventBase, handle_event
+from flurry.core import schema
+from flurry.core.aggregate import AggregateBase
+from flurry.core.application import Application
+from flurry.core.command import CommandBase
+from flurry.core.event import EventBase, handle_event
 
 
 def test_application():

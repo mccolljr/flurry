@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "fete"
+name = "flurry"
 version = "0.1.0"
 description = ""
 authors = ["Jacob McCollum <jacob.r.mccollum@gmail.com>"]
@@ -21,7 +21,7 @@ pylint = "^2.12.2"
 [tool.mypy]
 python_version = "3.10"
 follow_imports = "normal"
-mypy_path = ["fete.core", "fete.graphql", "fete.postgres", "fete.web"]
+mypy_path = ["flurry.core", "flurry.graphql", "flurry.postgres", "flurry.web"]
 files = ["."]
 exclude = ["tests"]
 namespace_packages = true

@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 import datetime as dt
 
-from fete.core import schema
+from flurry.core import schema
 
 # A timezone at UTC-5:00 (generally corresponds to America/New_York)
 DEFAULT_TZ = dt.timezone(dt.timedelta(hours=-5))

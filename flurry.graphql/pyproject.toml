@@ -1,21 +1,21 @@
 [tool.poetry]
-name = "fete-graphql"
+name = "flurry-graphql"
 version = "0.1.0"
 description = ""
 authors = ["Jacob McCollum <jacob.r.mccollum@gmail.com>"]
 readme = "README.md"
-packages = [{ include = "fete" }]
+packages = [{ include = "flurry" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
 graphene = "^3.0"
 aiohttp = "^3.8.1"
 aiohttp-middlewares = "^1.2.1"
-"fete-core" = "^0.1.0"
+"flurry-core" = "^0.1.0"
 graphql-core = "<3.2.0"
 
 [tool.poetry.dev-dependencies]
-"fete-core" = { path = "../fete.core", develop = true }
+"flurry-core" = { path = "../flurry.core", develop = true }
 
 
 [build-system]
