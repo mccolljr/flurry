@@ -1,0 +1,46 @@
+# name: test_schema[graphql-schema]
+  '
+  schema {
+    query: QueryRoot
+    mutation: MutationRoot
+  }
+  
+  type QuuxData {
+    q: String
+    r: String
+    s: Float
+  }
+  
+  input QuuxDataInput {
+    q: String = null
+    r: String = null
+    s: Float = null
+  }
+  
+  type QueryRoot {
+    FooQuery(a: String = null, b: DateTime = null): FooQueryResult
+  }
+  
+  type FooQueryResult {
+    x: Float
+    y: [Boolean!]
+  }
+  
+  """
+  The `DateTime` scalar type represents a DateTime
+  value as specified by
+  [iso8601](https://en.wikipedia.org/wiki/ISO_8601).
+  """
+  scalar DateTime
+  
+  type MutationRoot {
+    BarCommand(a: String = null, b: DateTime = null, z: QuuxDataInput = null): BarCommandResult
+  }
+  
+  type BarCommandResult {
+    x: Float
+    y: QuuxData
+  }
+  
+  '
+---

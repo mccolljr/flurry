@@ -47,16 +47,14 @@ tasks:
         done
 
   build:
-    silent: true
     cmds:
       - task: for_all
         vars: { DO_COMMAND: "poetry build" }
 
   clean:
-    silent: true
     cmds:
       - task: for_all
-        vars: { DO_COMMAND: "rm -rf dist/" }
+        vars: { DO_COMMAND: "echo 'removing dist/' && rm -rf dist/" }
 
   install:
     - poetry install

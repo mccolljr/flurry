@@ -1,3 +1,4 @@
 import sys
+import glob
 
-sys.path.extend(["flurry.core", "flurry.graphql", "flurry.postgres"])
+sys.path.extend(glob.glob("flurry.*"))

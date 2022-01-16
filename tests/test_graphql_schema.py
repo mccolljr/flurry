@@ -1,3 +1,4 @@
+# pylint: disable=missing-class-docstring
 from typing import cast
 
 from flurry.core import schema
@@ -18,8 +19,8 @@ class FooQuery(QueryBase):
         x = schema.Field(schema.Float)
         y = schema.Field(schema.Collection(schema.Bool()))
 
-    def fetch(self, context: Context) -> Result:
-        return self.Result(1)
+    async def fetch(self, context: Context) -> Result:
+        return self.Result(x=1.0, y=[True, False])
 
 
 class QuuxData(schema.SchemaBase):
@@ -38,53 +39,9 @@ class BarCommand(CommandBase):
         x = schema.Field(schema.Float)
         y = schema.Field(schema.Object(QuuxData))
 
-    def exec(self, context: Context) -> Result:
-        return self.Result(1)
+    async def exec(self, context: Context) -> Result:
+        return self.Result(x=1, y=QuuxData())
 
 
-def test_schema():
-    assert (
-        str(_APP.gql_schema)
-        == """schema {
-  query: QueryRoot
-  mutation: MutationRoot
-}
-
-type QuuxData {
-  q: String
-  r: String
-  s: Float
-}
-
-input QuuxDataInput {
-  q: String = null
-  r: String = null
-  s: Float = null
-}
-
-type QueryRoot {
-  FooQuery(a: String = null, b: DateTime = null): FooQueryResult
-}
-
-type FooQueryResult {
-  x: Float
-  y: [Boolean!]
-}
-
-\"\"\"
-The `DateTime` scalar type represents a DateTime
-value as specified by
-[iso8601](https://en.wikipedia.org/wiki/ISO_8601).
-\"\"\"
-scalar DateTime
-
-type MutationRoot {
-  BarCommand(a: String = null, b: DateTime = null, z: QuuxDataInput = null): BarCommandResult
-}
-
-type BarCommandResult {
-  x: Float
-  y: QuuxData
-}
-"""
-    )
+def test_schema(snapshot):
+    assert str(_APP.gql_schema) == snapshot(name="graphql-schema")

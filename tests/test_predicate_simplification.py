@@ -1,6 +1,3 @@
-import pytest
-
-
 from flurry.core import predicate as P
 from flurry.core.utils import visit_predicate
 from flurry.postgres import _PostgreSQLSimplifier
