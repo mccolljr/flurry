@@ -8,6 +8,7 @@ packages = [{ include = "flurry" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+aiohttp = "^3.8.1"
 stringcase = "^1.2.0"
 "flurry-util" = "^0.1.0"
 "flurry-core" = "^0.1.0"

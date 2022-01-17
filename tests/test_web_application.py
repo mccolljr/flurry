@@ -1,9 +1,9 @@
-from http import client
 from typing import Any, Dict, cast
 
 import pytest
 import asyncio
 import aiohttp
+import aiohttp.web
 
 from contextlib import asynccontextmanager
 
@@ -106,8 +106,13 @@ class SubscriptionA(SubscriptionBase):
 
 @asynccontextmanager
 async def run_application():
+    async def test_mid(req, handler):
+        resp: aiohttp.web.StreamResponse = await handler(req)
+        resp.headers["X-MiddlewareWorks"] = "Yes"
+        return resp
+
     loop = asyncio.get_event_loop()
-    task = loop.create_task(APP.run(port=12345))
+    task = loop.create_task(APP.run(port=12345, middlewares=(test_mid,)))
     try:
         yield
     finally:
@@ -131,6 +136,7 @@ async def assert_response(
         json=body,
         headers={"Content-Type": "application/json"},
     ) as resp:
+        assert resp.headers["X-MiddlewareWorks"] == "Yes"
         if want_status is not None:
             assert want_status == resp.status
         else:

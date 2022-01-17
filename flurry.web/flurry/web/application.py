@@ -6,6 +6,7 @@ from typing import (
     Callable,
     Dict,
     Generic,
+    Iterable,
     List,
     Optional,
     TypeVar,
@@ -45,6 +46,11 @@ _T_MaybeResult = TypeVar("_T_MaybeResult", bound=Union[schema.SchemaBase, None])
 _Decorator = Callable[[_T_AnyMeta], _T_AnyMeta]
 # pylint: enable=invalid-name
 
+
+Handler = Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.StreamResponse]]
+Middleware = Callable[
+    [aiohttp.web.Request, Handler], Awaitable[aiohttp.web.StreamResponse]
+]
 Guard = Callable[[_T_Context, aiohttp.web.Request], Union[None, Awaitable[None]]]
 
 
@@ -289,12 +295,7 @@ class WebApplication(Generic[_T_Context], Application):
             return subscription_decorator(subscription)
         return subscription_decorator
 
-    def route(
-        self,
-        method: str,
-        path: str,
-        handler: Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.StreamResponse]],
-    ):
+    def route(self, method: str, path: str, handler: Handler):
         async def do_request(req: aiohttp.web.Request):
             return await handler(req)
 
@@ -309,8 +310,16 @@ class WebApplication(Generic[_T_Context], Application):
             args.update(await req.json())
         return args
 
-    async def run(self, host: str = "localhost", port: int = 8080):
-        web_app = aiohttp.web.Application()
+    async def run(
+        self,
+        *,
+        host: str = "localhost",
+        port: int = 8080,
+        middlewares: Iterable[Middleware] = (),
+    ):
+        web_app = aiohttp.web.Application(
+            middlewares=tuple(aiohttp.web.middleware(f) for f in middlewares)
+        )
         web_app.add_routes(self._routes)
         for route in self._routes:
             print(f"{getattr(route, 'method')} {getattr(route, 'path')}")
