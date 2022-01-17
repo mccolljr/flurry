@@ -12,11 +12,11 @@
 #### postgres
 
 - [ ] postgres query simplification cleanup
-- [ ] allow per-aggregate events and tables
+- [ ] allow per-aggregate/per-event tables
 
 #### web
 
-- [ ] subscriptions (websocket)
+- [x] subscriptions (websocket)
 
 #### graphql
 
