@@ -1,3 +1,4 @@
+from http import client
 from typing import Any, Dict, cast
 
 import pytest
@@ -7,11 +8,10 @@ import aiohttp
 from contextlib import asynccontextmanager
 
 from flurry.core import schema
+from flurry.web import WebApplication
 from flurry.core.context import Context
 from flurry.core.query import QueryBase
 from flurry.core.command import CommandBase
-from flurry.web.application import WebApplication
-
 from flurry.core.subscription import SubscriptionBase
 
 APP = WebApplication(cast(Context, None))
@@ -94,12 +94,14 @@ class QueryIII(QueryBase):
 @APP.subscription(path="/sub1")
 class SubscriptionA(SubscriptionBase):
     class Result(schema.SchemaBase):
-        worked = schema.Field(schema.Bool, default=True)
+        value = schema.Field(schema.Int, nullable=False)
 
     async def subscribe(
         self, context: Context
     ):  # pylint: disable=invalid-overridden-method
-        yield self.Result(worked=True)
+        for i in range(0, 10):
+            await asyncio.sleep(1)
+            yield self.Result(value=i)
 
 
 @asynccontextmanager
@@ -179,3 +181,11 @@ async def test_web_application():
             body={"arg": "hazmat"},
             want_body={"reverse": "tamzah"},
         )
+
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(
+                "ws://localhost:12345/sub1"
+            ) as client_websock:
+                for i in range(0, 10):
+                    got = await client_websock.receive_json(timeout=2.0)
+                    assert got == {"value": i}

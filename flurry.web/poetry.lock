@@ -12,6 +12,19 @@ type = "directory"
 url = "../flurry.core"
 
 [[package]]
+name = "flurry-util"
+version = "0.1.0"
+description = ""
+category = "main"
+optional = false
+python-versions = "^3.10"
+develop = true
+
+[package.source]
+type = "directory"
+url = "../flurry.util"
+
+[[package]]
 name = "stringcase"
 version = "1.2.0"
 description = "String case converter."
@@ -22,10 +35,11 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "8ca9e3613b1c7d783599c53f1c0ada51f26071ae40f120ec5c685bd1c2ebe332"
+content-hash = "9a9025823859c25f9497d80385d533127e083e05aa301decb303ea8bf0bb80bd"
 
 [metadata.files]
 flurry-core = []
+flurry-util = []
 stringcase = [
     {file = "stringcase-1.2.0.tar.gz", hash = "sha256:48a06980661908efe8d9d34eab2b6c13aefa2163b3ced26972902e3bdfd87008"},
 ]

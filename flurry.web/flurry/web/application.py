@@ -18,8 +18,10 @@ import attr
 import asyncio
 import logging
 import stringcase  # type: ignore
+import aiohttp
 import aiohttp.web
 
+from flurry.util import JSON
 from flurry.core import schema
 from flurry.core.context import Context
 from flurry.core.application import Application
@@ -28,6 +30,9 @@ from flurry.core.schema import SchemaBase, SchemaMeta
 from flurry.core.command import CommandBase, CommandMeta
 from flurry.core.subscription import SubscriptionBase, SubscriptionMeta
 
+LOG = logging.getLogger(__name__)
+
+__all__ = ("WebApplication",)
 
 # pylint: disable=invalid-name
 _T_QueryMeta = TypeVar("_T_QueryMeta", bound=QueryMeta)
@@ -67,11 +72,11 @@ class _CommandHandler(Generic[_T_Context, _T_MaybeResult]):
                 result = result.to_dict()
             if result is None:
                 return aiohttp.web.json_response(status=200)
-            return aiohttp.web.json_response(result, status=200)
+            return aiohttp.web.json_response(result, status=200, dumps=JSON.dumps)
         except aiohttp.web.HTTPError:
             raise
         except BaseException as err:
-            logging.error(err)
+            LOG.error("request failed: %s", err, exc_info=err)
             raise aiohttp.web.HTTPInternalServerError from err
 
 
@@ -99,11 +104,11 @@ class _QueryHandler(Generic[_T_Context, _T_Result]):
                 result = result.to_dict()
             if result is None:
                 return aiohttp.web.json_response(status=200)
-            return aiohttp.web.json_response(result, status=200)
+            return aiohttp.web.json_response(result, status=200, dumps=JSON.dumps)
         except aiohttp.web.HTTPError:
             raise
         except BaseException as err:
-            logging.error(err)
+            LOG.error("request failed: %s", err, exc_info=err)
             raise aiohttp.web.HTTPInternalServerError from err
 
 
@@ -126,13 +131,26 @@ class _SubscriptionHandler(Generic[_T_Context, _T_Result]):
             inst: SubscriptionBase[_T_Context, _T_Result] = self.subscription(**args)
             websock = aiohttp.web.WebSocketResponse(heartbeat=5)
             await websock.prepare(req)
-            async for item in inst.subscribe(self.context):
-                await websock.send_json(item.to_dict())
+
+            async def consume():
+                async for _msg in websock:
+                    pass
+
+            async def produce():
+                async for item in inst.subscribe(self.context):
+                    await websock.send_json(item.to_dict(), dumps=JSON.dumps)
+                await websock.close(code=aiohttp.WSCloseCode.OK)
+
+            try:
+                await asyncio.gather(consume(), produce())
+            finally:
+                if not websock.closed:
+                    await websock.close(code=aiohttp.WSCloseCode.ABNORMAL_CLOSURE)
             return websock
         except aiohttp.web.HTTPError:
             raise
         except BaseException as err:
-            logging.error(err)
+            LOG.error("request failed: %s", err, exc_info=err)
             raise aiohttp.web.HTTPInternalServerError from err
 
 
