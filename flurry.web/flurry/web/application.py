@@ -6,6 +6,7 @@ from typing import (
     Callable,
     Dict,
     Generic,
+    List,
     Optional,
     TypeVar,
     Union,
@@ -39,15 +40,22 @@ _T_MaybeResult = TypeVar("_T_MaybeResult", bound=Union[schema.SchemaBase, None])
 _Decorator = Callable[[_T_AnyMeta], _T_AnyMeta]
 # pylint: enable=invalid-name
 
+Guard = Callable[[_T_Context, aiohttp.web.Request], Union[None, Awaitable[None]]]
+
 
 @attr.define
 class _CommandHandler(Generic[_T_Context, _T_MaybeResult]):
     command: CommandMeta
+    guards: List[Guard[_T_Context]]
     context: _T_Context
     getargs: Optional[Callable[[aiohttp.web.Request], Awaitable[Dict[str, Any]]]]
 
     async def __call__(self, req: aiohttp.web.Request) -> aiohttp.web.StreamResponse:
         try:
+            for guard in self.guards:
+                guard_outcome = guard(self.context, req)
+                if isawaitable(guard_outcome):
+                    await guard_outcome
             args = {}
             if self.getargs:
                 args.update(await self.getargs(req))
@@ -70,11 +78,16 @@ class _CommandHandler(Generic[_T_Context, _T_MaybeResult]):
 @attr.define
 class _QueryHandler(Generic[_T_Context, _T_Result]):
     query: QueryMeta
+    guards: List[Guard[_T_Context]]
     context: _T_Context
     getargs: Optional[Callable[[aiohttp.web.Request], Awaitable[Dict[str, Any]]]]
 
     async def __call__(self, req: aiohttp.web.Request) -> aiohttp.web.StreamResponse:
         try:
+            for guard in self.guards:
+                guard_outcome = guard(self.context, req)
+                if isawaitable(guard_outcome):
+                    await guard_outcome
             args = {}
             if self.getargs:
                 args.update(await self.getargs(req))
@@ -97,11 +110,16 @@ class _QueryHandler(Generic[_T_Context, _T_Result]):
 @attr.define
 class _SubscriptionHandler(Generic[_T_Context, _T_Result]):
     subscription: SubscriptionMeta
+    guards: List[Guard[_T_Context]]
     context: _T_Context
     getargs: Optional[Callable[[aiohttp.web.Request], Awaitable[Dict[str, Any]]]]
 
     async def __call__(self, req: aiohttp.web.Request) -> aiohttp.web.WebSocketResponse:
         try:
+            for guard in self.guards:
+                guard_outcome = guard(self.context, req)
+                if isawaitable(guard_outcome):
+                    await guard_outcome
             args = {}
             if self.getargs:
                 args.update(await self.getargs(req))
@@ -150,6 +168,7 @@ class WebApplication(Generic[_T_Context], Application):
 
         def query_decorator(query: _T_QueryMeta) -> _T_QueryMeta:
             path = extra.get("path", "/" + self._name_to_path(query.__name__))
+            guards = extra.get("guards", [])
             methods = extra.get("method", ["GET"])
             if isinstance(methods, str):
                 methods = [methods]
@@ -159,6 +178,7 @@ class WebApplication(Generic[_T_Context], Application):
                     path,
                     _QueryHandler(
                         query,
+                        guards,
                         self._context,
                         self.__get_args if meth == "GET" else self.__post_args,
                     ),
@@ -185,6 +205,7 @@ class WebApplication(Generic[_T_Context], Application):
 
         def command_decorator(command: _T_CommandMeta) -> _T_CommandMeta:
             path = extra.get("path", "/" + self._name_to_path(command.__name__))
+            guards = extra.get("guards", [])
             methods = extra.get("method", ["POST"])
             if isinstance(methods, str):
                 methods = [methods]
@@ -194,6 +215,7 @@ class WebApplication(Generic[_T_Context], Application):
                     path,
                     _CommandHandler(
                         command,
+                        guards,
                         self._context,
                         self.__get_args if meth == "GET" else self.__post_args,
                     ),
@@ -226,6 +248,7 @@ class WebApplication(Generic[_T_Context], Application):
             subscription: _T_SubscriptionMeta,
         ) -> _T_SubscriptionMeta:
             path = extra.get("path", "/" + self._name_to_path(subscription.__name__))
+            guards = extra.get("guards", [])
             methods = extra.get("method", ["GET"])
             if isinstance(methods, str):
                 methods = [methods]
@@ -237,6 +260,7 @@ class WebApplication(Generic[_T_Context], Application):
                     path,
                     _SubscriptionHandler(
                         subscription,
+                        guards,
                         self._context,
                         self.__get_args if meth == "GET" else self.__post_args,
                     ),

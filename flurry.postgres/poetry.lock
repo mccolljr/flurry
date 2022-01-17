@@ -35,6 +35,19 @@ type = "directory"
 url = "../flurry.core"
 
 [[package]]
+name = "flurry-util"
+version = "0.1.0"
+description = ""
+category = "main"
+optional = false
+python-versions = "^3.10"
+develop = true
+
+[package.source]
+type = "directory"
+url = "../flurry.util"
+
+[[package]]
 name = "psycopg2-binary"
 version = "2.9.3"
 description = "psycopg2 - Python-PostgreSQL Database Adapter"
@@ -45,7 +58,7 @@ python-versions = ">=3.6"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "524b12b5ae3e9e0d74a0aa234ce37f72d07efb51679328b241bcf66f595b9950"
+content-hash = "a7a31e88cdd00e4799e5d3a0ac03a8cf3082484b71c2e4b6717f052c81919f1b"
 
 [metadata.files]
 aiopg = [
@@ -57,6 +70,7 @@ async-timeout = [
     {file = "async_timeout-4.0.2-py3-none-any.whl", hash = "sha256:8ca1e4fcf50d07413d66d1a5e416e42cfdf5851c981d679a09851a6853383b3c"},
 ]
 flurry-core = []
+flurry-util = []
 psycopg2-binary = [
     {file = "psycopg2-binary-2.9.3.tar.gz", hash = "sha256:761df5313dc15da1502b21453642d7599d26be88bff659382f8f9747c7ebea4e"},
     {file = "psycopg2_binary-2.9.3-cp310-cp310-macosx_10_14_x86_64.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl", hash = "sha256:539b28661b71da7c0e428692438efbcd048ca21ea81af618d845e06ebfd29478"},

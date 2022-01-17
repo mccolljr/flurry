@@ -12,6 +12,8 @@ from flurry.core.query import QueryBase
 from flurry.core.command import CommandBase
 from flurry.web.application import WebApplication
 
+from flurry.core.subscription import SubscriptionBase
+
 APP = WebApplication(cast(Context, None))
 
 
@@ -87,6 +89,17 @@ class QueryIII(QueryBase):
         if self.arg is None:
             return self.Result()
         return self.Result(reverse=self.arg[::-1])
+
+
+@APP.subscription(path="/sub1")
+class SubscriptionA(SubscriptionBase):
+    class Result(schema.SchemaBase):
+        worked = schema.Field(schema.Bool, default=True)
+
+    async def subscribe(
+        self, context: Context
+    ):  # pylint: disable=invalid-overridden-method
+        yield self.Result(worked=True)
 
 
 @asynccontextmanager

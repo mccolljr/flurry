@@ -1,1 +1,3 @@
-from .postgres import _PostgreSQLSimplifier
+from .postgres import PostgreSQLStorage
+
+__all__ = ("PostgreSQLStorage",)

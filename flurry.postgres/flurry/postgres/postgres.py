@@ -2,13 +2,13 @@
 
 from typing import Any, AsyncGenerator, Iterable, List, Optional, Tuple
 
-import json
 import aiopg  # type: ignore
 import logging
 import asyncio
 import datetime as dt
 from contextlib import asynccontextmanager
 
+from flurry.util import JSON
 from flurry.core import predicate as P
 from flurry.core.event import EventBase, EventMeta
 from flurry.core.predicate import Predicate
@@ -22,131 +22,6 @@ from flurry.core.utils import (
 )
 
 LOG = logging.getLogger("postgresql")
-
-
-class _rwlock:
-    __slots__ = ("_writers", "_readers", "_reading", "_writing")
-
-    def __init__(self):
-        self._writers: List[asyncio.Future[None]] = []
-        self._readers: List[asyncio.Future[None]] = []
-        self._reading = 0
-        self._writing = 0
-
-    class _handle:
-
-        __slots__ = ("_lock", "_released", "_is_write")
-
-        def __init__(self, lock: "_rwlock", write: bool):
-            self._lock = lock
-            self._is_write = write
-            self._released = False
-
-        async def upgrade(self):
-            if self._released:
-                raise RuntimeError("cannot upgrade a released lock")
-            if self._is_write:
-                raise RuntimeError("cannot upgrade a write lock")
-            write_wait = self._lock._can_write()  # pylint: disable=protected-access
-            self._release()
-            self._released = False
-            self._is_write = True
-            await write_wait
-
-        async def downgrade(self):
-            if self._released:
-                raise RuntimeError("cannot downgrade a released lock")
-            if not self._is_write:
-                raise RuntimeError("cannot downgrade a read lock")
-            read_wait = self._lock._can_read()  # pylint: disable=protected-access
-            self._release()
-            await read_wait
-            self._released = False
-            self._is_write = False
-
-        def _release(self):
-            if not self._released:
-                self._released = True
-                if self._is_write:
-                    self._lock._done_writing()  # pylint: disable=protected-access
-                else:
-                    self._lock._done_reading()  # pylint: disable=protected-access
-
-    @asynccontextmanager
-    async def lock(self) -> AsyncGenerator["_handle", None]:
-        await self._can_write()
-        handle = self._handle(self, True)
-        try:
-            yield handle
-        finally:
-            handle._release()  # pylint: disable=protected-access
-
-    @asynccontextmanager
-    async def rlock(self) -> AsyncGenerator["_handle", None]:
-        await self._can_read()
-        handle = self._handle(self, False)
-        try:
-            yield handle
-        finally:
-            handle._release()  # pylint: disable=protected-access
-
-    async def _can_read(self):
-        if self._writing:
-            fut = asyncio.Future[None]()
-            self._readers.append(fut)
-            await fut
-        self._reading += 1
-
-    def _done_reading(self):
-        self._reading -= 1
-        if self._reading > 0:
-            return
-        # if this is the last reader, wake up the next writer (if any)
-        while self._writers:
-            next_writer = self._writers.pop(0)
-            if not next_writer.done():
-                next_writer.set_result(None)
-                return
-
-    async def _can_write(self):
-        self._writing += 1
-        if not self._reading:
-            return
-        try:
-            fut = asyncio.Future[None]()
-            self._writers.append(fut)
-            await fut
-        except:
-            self._writing -= 1
-            raise
-
-    def _done_writing(self):
-        self._writing -= 1
-        # if there is a writer in line, wake it up
-        while self._writers:
-            next_writer = self._writers.pop(0)
-            if not next_writer.done():
-                next_writer.set_result(None)
-                return
-        # otherwise, wake up the readers (if any)
-        while self._readers:
-            reader = self._readers.pop()
-            if not reader.done():
-                reader.set_result(None)
-
-
-class _pgjson(json.JSONEncoder):
-    """Provides JSON encoding for the database layer."""
-
-    def default(self, o):
-
-        if isinstance(o, dt.datetime):
-            return o.astimezone(dt.timezone.utc).isoformat()
-        return super().default(o)
-
-    @classmethod
-    def dumps(cls, val: Any) -> str:
-        return json.dumps(val, cls=cls)
 
 
 class _PostgreSQLSimplifier(PredicateSQLSimplifier):
@@ -185,11 +60,11 @@ class _PostgreSQLSimplifier(PredicateSQLSimplifier):
             if is_negation:
                 return (
                     f"coalesce({self.data_field}->{self._ph()} {oper} {self._ph()}::jsonb, true)",
-                    (field, _pgjson.dumps(val)),
+                    (field, JSON.dumps(val)),
                 )
             return (
                 f"({self.data_field} ? {self._ph()} AND {self.data_field}->{self._ph()} {oper} {self._ph()}::jsonb)",
-                (field, field, _pgjson.dumps(val)),
+                (field, field, JSON.dumps(val)),
             )
         if isinstance(val, dt.datetime):
             field_as_timestamp_tz = self.timestamp_convert.format(
@@ -380,7 +255,7 @@ class PostgreSQLStorage:
             for evt in events:
                 params = (
                     evt.__class__.__name__,
-                    _pgjson.dumps(evt.to_dict()),
+                    JSON.dumps(evt.to_dict()),
                 )
                 await conn.execute(sql_str, params)
             LOG.info("SQL EXEC: %s", sql_str)
@@ -391,7 +266,7 @@ class PostgreSQLStorage:
             for snap in snaps:
                 snap_typ = type(snap)
                 snap_id = f"{snap_typ.__name__}:{getattr(snap, str(snap_typ.__schema__.id_field))}"
-                snap_data = _pgjson.dumps(snap.to_dict())
+                snap_data = JSON.dumps(snap.to_dict())
                 sql_str = """
                     INSERT INTO __snapshots (aggregate_id, aggregate_type, aggregate_data)
                         VALUES (%s, %s, %s)

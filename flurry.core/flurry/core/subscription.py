@@ -31,7 +31,7 @@ class SubscriptionMeta(ABCMeta, schema.SchemaMeta):
     def __new__(
         cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any], **extra
     ):
-        """Construct a new Query class."""
+        """Construct a new Subscription class."""
         attrs.setdefault("__subscription_mixin__", extra.pop("mixin", False))
         mewcls = super().__new__(cls, name, bases, attrs)
         return mewcls
@@ -47,7 +47,6 @@ class SubscriptionMeta(ABCMeta, schema.SchemaMeta):
 
     @staticmethod
     def _validate_result(the_cls: type):
-
         result_class = getattr(the_cls, "Result", None)
         if result_class is None:
             raise SubscriptionDefinitionError(
@@ -61,12 +60,12 @@ class SubscriptionMeta(ABCMeta, schema.SchemaMeta):
 
     @staticmethod
     def _validate_subscribe(the_cls: type):
-        fetch = getattr(the_cls, "fetch", None)
-        if fetch is None or getattr(fetch, "__isabstractmethod__", False):
+        subscribe = getattr(the_cls, "subscribe", None)
+        if subscribe is None or getattr(subscribe, "__isabstractmethod__", False):
             raise SubscriptionDefinitionError(
                 the_cls.__name__, "subscribe method must be defined"
             )
-        if not callable(fetch):
+        if not callable(subscribe):
             raise SubscriptionDefinitionError(
                 the_cls.__name__, "subscribe must be callable"
             )
@@ -81,7 +80,7 @@ class SubscriptionBase(
     where `isinstance(Result, SchemaMeta)` is `True`
 
     If a subclass specifies a member `__subscription_mixin__` with a value of `True`,
-    that class can serve as a common base class for multiple queries.
+    that class can serve as a common base class for multiple subscriptions.
     """
 
     __subscription_mixin__ = True
