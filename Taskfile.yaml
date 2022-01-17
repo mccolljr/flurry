@@ -48,11 +48,13 @@ tasks:
 
   build:
     cmds:
+      - if [ ! -d "./dist" ]; then mkdir dist; fi
       - task: for_all
-        vars: { DO_COMMAND: "poetry build" }
+        vars: { DO_COMMAND: "poetry build && cp ./dist/* ../dist" }
 
   clean:
     cmds:
+      - if [ -d "./dist" ]; then rm -rf ./dist; fi
       - task: for_all
         vars: { DO_COMMAND: "echo 'removing dist/' && rm -rf dist/" }
 
