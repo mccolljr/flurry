@@ -9,12 +9,14 @@ from .event import EventMeta
 from .schema import SchemaMeta
 from .command import CommandMeta
 from .aggregate import AggregateMeta
+from .subscription import SubscriptionMeta
 
 # pylint: disable=invalid-name
 _T_EventMeta = TypeVar("_T_EventMeta", bound=EventMeta)
 _T_QueryMeta = TypeVar("_T_QueryMeta", bound=QueryMeta)
 _T_CommandMeta = TypeVar("_T_CommandMeta", bound=CommandMeta)
 _T_AggregateMeta = TypeVar("_T_AggregateMeta", bound=AggregateMeta)
+_T_SubscriptionMeta = TypeVar("_T_SubscriptionMeta", bound=SubscriptionMeta)
 _T_AnyMeta = TypeVar("_T_AnyMeta", bound=SchemaMeta)
 _Decorator = Callable[[_T_AnyMeta], _T_AnyMeta]
 # pylint: enable=invalid-name
@@ -34,6 +36,7 @@ class Application:
     _queries: List[QueryMeta]
     _commands: List[CommandMeta]
     _aggregates: List[AggregateMeta]
+    _subscriptions: List[SubscriptionMeta]
 
     def __init__(self):
         """Initialize the application data."""
@@ -41,6 +44,7 @@ class Application:
         self._queries = []
         self._commands = []
         self._aggregates = []
+        self._subscriptions = []
         self._related_events = {}
         self._creation_events = {}
 
@@ -108,6 +112,32 @@ class Application:
 
         if command is not None:
             return decorator(command)
+        return decorator
+
+    @overload
+    def subscription(
+        self, subscription: None, **extra
+    ) -> _Decorator[_T_SubscriptionMeta]:
+        ...
+
+    @overload
+    def subscription(
+        self, subscription: _T_SubscriptionMeta, **extra
+    ) -> _T_SubscriptionMeta:
+        ...
+
+    def subscription(
+        self, subscription: Optional[_T_SubscriptionMeta] = None, **_extra
+    ) -> Union[_T_SubscriptionMeta, _Decorator[_T_SubscriptionMeta]]:
+        """Register a subscription type."""
+
+        def decorator(subscription: _T_SubscriptionMeta) -> _T_SubscriptionMeta:
+            self._subscriptions.append(subscription)
+            LOG.info("application subscription: %s", subscription.__name__)
+            return subscription
+
+        if subscription is not None:
+            return decorator(subscription)
         return decorator
 
     @overload
@@ -191,9 +221,6 @@ class Application:
             "yourproject.event",
             "thirdparty.utilmodule"
         )
-
-        if __name__ == "__main__":
-            APP.run()
         ```
         """
         import importlib
