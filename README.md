@@ -1,12 +1,11 @@
+This project is under active development.
+
 ## TODO
 
 #### all
-
-- [ ] expand this list
 - [ ] improved documentation
 
 #### core
-
 - [ ] log compaction algorithms
 
 #### postgres
@@ -17,7 +16,9 @@
 #### web
 
 - [x] subscriptions (websocket)
+- [x] allow middlewares
 
 #### graphql
 
 - [ ] subscriptions (graphql subscription)
+- [ ] allow middlewares, remove current cors handling
