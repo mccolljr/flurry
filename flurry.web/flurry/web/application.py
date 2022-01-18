@@ -31,7 +31,7 @@ from flurry.core.schema import SchemaBase, SchemaMeta
 from flurry.core.command import CommandBase, CommandMeta
 from flurry.core.subscription import SubscriptionBase, SubscriptionMeta
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("flurry.web")
 
 __all__ = ("WebApplication",)
 
@@ -149,6 +149,8 @@ class _SubscriptionHandler(Generic[_T_Context, _T_Result]):
 
             try:
                 await asyncio.gather(consume(), produce())
+            except asyncio.CancelledError:
+                pass
             finally:
                 if not websock.closed:
                     await websock.close(code=aiohttp.WSCloseCode.ABNORMAL_CLOSURE)

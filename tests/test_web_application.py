@@ -1,4 +1,4 @@
-from typing import Any, Dict, cast
+from typing import Any, Dict, List, cast
 
 import pytest
 import asyncio
@@ -145,6 +145,17 @@ async def assert_response(
             assert (await resp.json()) == want_body
 
 
+async def assert_subscription(url: str, values: List[Any]):
+    async with aiohttp.ClientSession() as session:
+        async with session.ws_connect(url) as client_websock:
+            while values:
+                expect = values.pop(0)
+                got = await client_websock.receive_json(timeout=2.0)
+                assert got == expect, f"expected {expect!r}, got {got!r}"
+            msg = await client_websock.receive()
+            assert msg.type == aiohttp.WSMsgType.CLOSE
+
+
 @pytest.mark.asyncio
 async def test_web_application():
     import datetime as dt
@@ -153,45 +164,55 @@ async def test_web_application():
     async with run_application():
         now = dt.datetime.now(dt.timezone.utc)
         await asyncio.sleep(2)
-        await assert_response(
-            "POST",
-            get_url("command1"),
-            body={"arg": "test"},
-            want_body={"echo": "test"},
-        )
-        await assert_response(
-            "POST",
-            get_url("commandTwo/10"),
-            want_body={"double": 20, "triple": 30},
-        )
-        await assert_response(
-            "GET",
-            get_url("command3"),
-            query={"arg": now.isoformat()},
-            want_body={"unix": now.timestamp()},
-        )
-        await assert_response(
-            "GET",
-            get_url("query1"),
-            want_body={"hello": "Hello"},
-        )
-        await assert_response(
-            "GET",
-            get_url("queryTwo/abc"),
-            query={"arg2": "xyz"},
-            want_body={"concat": "abcxyz"},
-        )
-        await assert_response(
-            "PUT",
-            get_url("query3"),
-            body={"arg": "hazmat"},
-            want_body={"reverse": "tamzah"},
-        )
 
-        async with aiohttp.ClientSession() as session:
-            async with session.ws_connect(
-                "ws://localhost:12345/sub1"
-            ) as client_websock:
-                for i in range(0, 10):
-                    got = await client_websock.receive_json(timeout=2.0)
-                    assert got == {"value": i}
+        await asyncio.gather(
+            assert_subscription(
+                "ws://localhost:12345/sub1",
+                [
+                    {"value": 0},
+                    {"value": 1},
+                    {"value": 2},
+                    {"value": 3},
+                    {"value": 4},
+                    {"value": 5},
+                    {"value": 6},
+                    {"value": 7},
+                    {"value": 8},
+                    {"value": 9},
+                ],
+            ),
+            assert_response(
+                "POST",
+                get_url("command1"),
+                body={"arg": "test"},
+                want_body={"echo": "test"},
+            ),
+            assert_response(
+                "POST",
+                get_url("commandTwo/10"),
+                want_body={"double": 20, "triple": 30},
+            ),
+            assert_response(
+                "GET",
+                get_url("command3"),
+                query={"arg": now.isoformat()},
+                want_body={"unix": now.timestamp()},
+            ),
+            assert_response(
+                "GET",
+                get_url("query1"),
+                want_body={"hello": "Hello"},
+            ),
+            assert_response(
+                "GET",
+                get_url("queryTwo/abc"),
+                query={"arg2": "xyz"},
+                want_body={"concat": "abcxyz"},
+            ),
+            assert_response(
+                "PUT",
+                get_url("query3"),
+                body={"arg": "hazmat"},
+                want_body={"reverse": "tamzah"},
+            ),
+        )

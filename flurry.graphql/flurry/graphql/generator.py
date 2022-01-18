@@ -31,6 +31,8 @@ _GraphQLConvertedField = Union[
     UnmountedType,
 ]
 
+LOG = logging.getLogger("flurry.graphql")
+
 
 class GraphqlGenerator:
     """A class capable of generating a graphql schema for the given target application."""
@@ -188,7 +190,7 @@ class GraphqlGenerator:
                     return mutation_type(**result.to_dict())
                 return mutation_type(ok=True)
             except Exception as err:
-                logging.error(
+                LOG.error(
                     "failure while processing command: %s",
                     command.__name__,
                     exc_info=err,
@@ -234,7 +236,7 @@ class GraphqlGenerator:
                     result = await result
                 return result
             except Exception as err:
-                logging.error(
+                LOG.error(
                     "failure while processing query: %s",
                     query.__name__,
                     exc_info=err,

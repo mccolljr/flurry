@@ -13,9 +13,13 @@ from flurry.core.application import Application
 
 from .generator import GraphqlGenerator
 
+__all__ = ("CorsOptions", "GraphqlApplication")
+
 # pylint: disable=invalid-name
 _T_Context = TypeVar("_T_Context", bound=Context)
 # pylint: enable=invalid-name
+
+LOG = logging.getLogger("flurry.graphql")
 
 
 class CorsOptions(NamedTuple):
@@ -38,15 +42,15 @@ class GraphqlApplication(Generic[_T_Context], Application):
         """Get the graphql schema serviced by this application."""
         existing = getattr(self, "__gql_schema", None)
         if existing is None:
-            logging.info("building graphql schema")
+            LOG.info("building graphql schema")
             existing = GraphqlGenerator(self).generate_schema()
             setattr(self, "__gql_schema", existing)
-            logging.info("schema built successfully")
+            LOG.info("schema built successfully")
         return existing
 
     def run(self, *, host: str = "localhost", port: int = 8080, **kwargs):
         """Run the server."""
-        logging.info("===== LISTENING ON %s:%d =====", host, port)
+        print(f"===== listening ont {host}:{port} =====")
         web.run_app(self._setup_app(), host=host, port=port, **kwargs)
 
     def _setup_app(self):

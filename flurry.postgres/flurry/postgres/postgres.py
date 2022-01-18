@@ -4,11 +4,10 @@ from typing import Any, AsyncGenerator, Iterable, List, Optional, Tuple
 
 import aiopg  # type: ignore
 import logging
-import asyncio
 import datetime as dt
 from contextlib import asynccontextmanager
 
-from flurry.util import JSON
+from flurry.util import JSON, RWLock
 from flurry.core import predicate as P
 from flurry.core.event import EventBase, EventMeta
 from flurry.core.predicate import Predicate
@@ -21,7 +20,7 @@ from flurry.core.utils import (
     visit_predicate,
 )
 
-LOG = logging.getLogger("postgresql")
+LOG = logging.getLogger("flurry.postgres")
 
 
 class _PostgreSQLSimplifier(PredicateSQLSimplifier):
@@ -131,7 +130,7 @@ class PostgreSQLStorage:
         self, *, host: str, port: str, user: str, password: str, database: str, **pgopts
     ):
         """Initialize new PostgreSQL storage using the given connection."""
-        self.__setup = asyncio.Lock()
+        self.__setup = RWLock()
         self.__dsn = (
             f"postgres://{user}:{password}@{host}:{port}/{database}"
             f"?{'&'.join(f'{name}={value}' for name, value in pgopts.items())}"
@@ -140,7 +139,10 @@ class PostgreSQLStorage:
         self.__timestamp_convert: Optional[str] = None
 
     async def __get_pool(self) -> aiopg.Pool:
-        async with self.__setup:
+        async with self.__setup.read:
+            if self.__pool is not None:
+                return self.__pool
+        async with self.__setup.write:
             if self.__pool is not None:
                 return self.__pool
             pool: aiopg.Pool = await aiopg.create_pool(self.__dsn)
@@ -229,7 +231,7 @@ class PostgreSQLStorage:
 
     async def load_events(self, query: Predicate = None) -> Iterable[EventBase]:
         """Load events that match the predicate."""
-        async with self.get_cursor() as conn:
+        async with self.get_transaction() as conn:
             events: List[EventBase] = []
             sql_str = "SELECT event_type, event_data from __events"
             params = None
@@ -250,7 +252,7 @@ class PostgreSQLStorage:
 
     async def save_events(self, events: Iterable[EventBase]):
         """Save new events."""
-        async with self.get_cursor() as conn:
+        async with self.get_transaction() as conn:
             sql_str = "INSERT INTO __events (event_type, event_data) values (%s, %s);"
             for evt in events:
                 params = (
@@ -262,7 +264,7 @@ class PostgreSQLStorage:
 
     async def save_snapshots(self, snaps: Iterable[AggregateBase]):
         """Save new snapshots."""
-        async with self.get_cursor() as conn:
+        async with self.get_transaction() as conn:
             for snap in snaps:
                 snap_typ = type(snap)
                 snap_id = f"{snap_typ.__name__}:{getattr(snap, str(snap_typ.__schema__.id_field))}"
@@ -299,8 +301,7 @@ class PostgreSQLStorage:
             return snaps
 
     async def close(self):
-        """Close underlying connection(s)."""
-        async with self.__setup:
+        """Close underlying connection pool."""
+        async with self.__setup.write:
             if self.__pool is not None:
                 self.__pool.close()
-                self.__pool = None

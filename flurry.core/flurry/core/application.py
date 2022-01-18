@@ -21,7 +21,7 @@ _T_AnyMeta = TypeVar("_T_AnyMeta", bound=SchemaMeta)
 _Decorator = Callable[[_T_AnyMeta], _T_AnyMeta]
 # pylint: enable=invalid-name
 
-LOG = logging.getLogger("application")
+LOG = logging.getLogger("flurry")
 
 
 class Application:

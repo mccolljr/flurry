@@ -9,12 +9,12 @@ packages = [{ include = "flurry" }]
 [tool.poetry.dependencies]
 python = "^3.10"
 aiopg = "^1.3.3"
-"flurry-core" = "^0.1.0"
 "flurry-util" = "^0.1.0"
+"flurry-core" = "^0.1.0"
 
 [tool.poetry.dev-dependencies]
-"flurry-core" = { path = "../flurry.core", develop = true }
 "flurry-util" = { path = "../flurry.util", develop = true }
+"flurry-core" = { path = "../flurry.core", develop = true }
 
 [build-system]
 requires = ["poetry-core"]
