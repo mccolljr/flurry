@@ -211,12 +211,12 @@ class PostgreSQLStorage:
     @asynccontextmanager
     async def get_transaction(self) -> AsyncGenerator[aiopg.Cursor, None]:
         async with self.get_cursor() as cur:
-            cur.execute("BEGIN;")
+            await cur.execute("BEGIN;")
             try:
                 yield cur
-                cur.execute("COMMIT;")
+                await cur.execute("COMMIT;")
             except:
-                cur.execute("ROLLBACK;")
+                await cur.execute("ROLLBACK;")
                 raise
 
     def __simplify(self, pred: Predicate, type_field: str, data_field: str):
@@ -281,7 +281,7 @@ class PostgreSQLStorage:
 
     async def load_snapshots(self, query: Predicate = None) -> Iterable[AggregateBase]:
         """Load snapshots that match the predicate."""
-        async with self.get_cursor() as conn:
+        async with self.get_transaction() as conn:
             snaps: List[AggregateBase] = []
             sql_str = "SELECT aggregate_type, aggregate_data from __snapshots"
             params = None
