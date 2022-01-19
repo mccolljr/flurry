@@ -3,6 +3,10 @@ from flurry.core.utils import visit_predicate
 from flurry.postgres.postgres import _PostgreSQLSimplifier
 
 predicates_to_simplify = {
+    "empty_or": P.Or(),
+    "empty_is": P.Is(),
+    "empty_and": P.And(),
+    "empty_where": P.Where(),
     "simple_and": P.And(P.Where(a=1), P.Where(b=2)),
     "simple_or": P.Or(P.Where(a=1), P.Where(b=2)),
     "simple_is": P.Is(str, int, float),
@@ -32,6 +36,7 @@ predicates_to_simplify = {
             g=P.Between(7, 8),
             h=P.OneOf(9, 10),
         ),
+        P.And(P.Is(), P.Where()),
     ),
 }
 

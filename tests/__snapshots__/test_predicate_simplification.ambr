@@ -1,6 +1,21 @@
 # name: test_postgresql_simplify[complex]
   <class 'tuple'> (
-    None,
+    <class 'Or'> {
+      alts=<class 'tuple'> (
+        <class 'And'> {
+          preds=<class 'tuple'> (
+            <class 'Is'> {
+              types=<class 'tuple'> (
+              ),
+            },
+            <class 'Where'> {
+              fields=<class 'dict'> {
+              },
+            },
+          ),
+        },
+      ),
+    },
     '(type_field IN (%s, %s, %s) OR (((data_field ? %s AND data_field->%s = %s::jsonb)) AND (coalesce(data_field->%s <> %s::jsonb, true)) AND ((data_field ? %s AND data_field->%s < %s::jsonb))) OR (((data_field ? %s AND data_field->%s > %s::jsonb)) AND ((data_field ? %s AND data_field->%s <= %s::jsonb)) AND ((data_field ? %s AND data_field->%s >= %s::jsonb))) OR (((data_field ? %s AND data_field->%s >= %s::jsonb) AND (data_field ? %s AND data_field->%s <= %s::jsonb)) AND ((data_field ? %s AND data_field->%s = %s::jsonb) OR (data_field ? %s AND data_field->%s = %s::jsonb))))',
     <class 'list'> [
       'int',
@@ -36,6 +51,46 @@
       'h',
       '10',
     ],
+  )
+---
+# name: test_postgresql_simplify[empty_and]
+  <class 'tuple'> (
+    <class 'And'> {
+      preds=<class 'tuple'> (
+      ),
+    },
+    None,
+    None,
+  )
+---
+# name: test_postgresql_simplify[empty_is]
+  <class 'tuple'> (
+    <class 'Is'> {
+      types=<class 'tuple'> (
+      ),
+    },
+    None,
+    None,
+  )
+---
+# name: test_postgresql_simplify[empty_or]
+  <class 'tuple'> (
+    <class 'Or'> {
+      alts=<class 'tuple'> (
+      ),
+    },
+    None,
+    None,
+  )
+---
+# name: test_postgresql_simplify[empty_where]
+  <class 'tuple'> (
+    <class 'Where'> {
+      fields=<class 'dict'> {
+      },
+    },
+    None,
+    None,
   )
 ---
 # name: test_postgresql_simplify[simple_and]

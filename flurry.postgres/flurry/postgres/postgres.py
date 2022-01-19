@@ -37,11 +37,15 @@ class _PostgreSQLSimplifier(PredicateSQLSimplifier):
         return "%s"
 
     def on_is(self, p_is: P.Is) -> SimplifiedPredicate:
+        if not p_is.types:
+            return p_is, None, None
         clause = f"{self.type_field} IN ({', '.join(self._ph() for _ in p_is.types)})"
         params = [t.__name__ if isinstance(t, type) else str(t) for t in p_is.types]
         return None, clause, params
 
     def on_where(self, p_where: P.Where) -> SimplifiedPredicate:
+        if not p_where.fields:
+            return p_where, None, None
         exprs: List[str] = []
         params: List[Any] = []
         for name, fpred in p_where.fields.items():
@@ -114,6 +118,8 @@ class _PostgreSQLSimplifier(PredicateSQLSimplifier):
         )
 
     def on_one_of(self, field: str, p_one_of: P.OneOf) -> SimplifiedPredicate:
+        if not p_one_of.options:
+            return p_one_of, None, None
         params: List[Any] = []
         exprs: List[str] = []
         for opt in p_one_of.options:

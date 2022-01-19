@@ -134,6 +134,8 @@ class PredicateSQLSimplifier:
 
     def on_or(self, p_or: P.Or) -> SimplifiedPredicate:
         """Generate SQL representing the OR of all sub-predicates."""
+        if not p_or.alts:
+            return p_or, None, None
         items = [visit_predicate(self, p) for p in p_or.alts]
         preds: List[AnyPredicate] = []
         clauses: List[str] = []
@@ -158,6 +160,8 @@ class PredicateSQLSimplifier:
 
     def on_and(self, p_and: P.And) -> SimplifiedPredicate:
         """Generate SQL representing the AND of all sub-predicates."""
+        if not p_and.preds:
+            return p_and, None, None
         items = [visit_predicate(self, p) for p in p_and.preds]
         preds: List[AnyPredicate] = []
         clauses: List[str] = []
