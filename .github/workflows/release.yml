@@ -1,33 +1,28 @@
-name: CI
-on: [push, pull_request]
+name: Release
+on:
+  push:
+    tags:
+      - "**"
 jobs:
-  ci:
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.9"]
-        os: [ubuntu-18.04]
-    runs-on: ${{ matrix.os }}
+  release:
+    runs-on: ubuntu-18.04
     steps:
       - name: check out the code
         uses: actions/checkout@v2
       - name: set up python environment
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.10"
       - name: create python virtualenv
         run: python -m venv .venv
       - name: install the task runner
         uses: arduino/setup-task@v1
         with:
           version: 3.10.0
-      - name: (macos) install docker
-        if: ${{ matrix.os == 'macos-latest' }}
-        run: |
-          brew install docker-machine docker
-          docker -–version
       - name: install deps and run tests
         run: |
           . .venv/bin/activate
           task postgres:build
           task ci
+          task build
+          python .github/releaser.py ./dist/*
