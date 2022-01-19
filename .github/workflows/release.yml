@@ -25,4 +25,5 @@ jobs:
           task postgres:build
           task ci
           task build
+          export GH_ACCESS_TOKEN=${{ secrets.GH_ACCESS_TOKEN}}
           python .github/releaser.py ./dist/*
