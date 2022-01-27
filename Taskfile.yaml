@@ -16,7 +16,13 @@ tasks:
     - poetry run pylint --rcfile=pyproject.toml flurry.*
 
   test:
-    - poetry run pytest {{.CLI_ARGS}}
+    - poetry run pytest -k 'not test_postgres_storage' {{.CLI_ARGS}}
+
+  test:postgres:
+    - task: postgres:start
+    - defer: { task: postgres:stop }
+    - sleep 5
+    - poetry run pytest -k 'test_postgres_storage' {{.CLI_ARGS}}
 
   test:examples:
     - task: postgres:start
@@ -33,6 +39,7 @@ tasks:
       - task: install
       - task: lint
       - task: test
+      - task: test:postgres
       - task: test:examples
 
   for_all:

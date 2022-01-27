@@ -309,7 +309,7 @@ class WebApplication(Generic[_T_Context], Application):
     async def __post_args(self, req: aiohttp.web.Request):
         args = await self.__get_args(req)
         if req.can_read_body:
-            args.update(await req.json())
+            args.update(await req.json(loads=JSON.loads))
         return args
 
     async def run(

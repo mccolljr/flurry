@@ -30,7 +30,7 @@ class _PostgreSQLSimplifier(PredicateSQLSimplifier):
         self.timestamp_convert = (
             timestamp_convert
             if timestamp_convert is not None
-            else r"""to_timestamp({}, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM')"""
+            else r"""({})::timestamptz"""
         )
 
     def _ph(self) -> str:
@@ -59,7 +59,18 @@ class _PostgreSQLSimplifier(PredicateSQLSimplifier):
         self, field: str, oper: str, val: Any
     ) -> Tuple[str, Iterable[Any]]:
         is_negation = oper in ("<>", "!=")
-        if isinstance(val, (str, int, float, bool)):
+        if val is None:
+            if is_negation:
+                return (
+                    f"{self.data_field} ? {self._ph()} AND {self.data_field}->{self._ph()} != 'null'",
+                    (field, field),
+                )
+            if oper == "=":
+                return (
+                    f"{self.data_field}->{self._ph()} IS NULL OR {self.data_field}->{self._ph()} = 'null'",
+                    (field, field),
+                )
+        elif isinstance(val, (str, int, float, bool)):
             if is_negation:
                 return (
                     f"coalesce({self.data_field}->{self._ph()} {oper} {self._ph()}::jsonb, true)",
@@ -69,20 +80,22 @@ class _PostgreSQLSimplifier(PredicateSQLSimplifier):
                 f"({self.data_field} ? {self._ph()} AND {self.data_field}->{self._ph()} {oper} {self._ph()}::jsonb)",
                 (field, field, JSON.dumps(val)),
             )
-        if isinstance(val, dt.datetime):
+        elif isinstance(val, dt.datetime):
             field_as_timestamp_tz = self.timestamp_convert.format(
                 f"{self.data_field}->>{self._ph()}"
             )
             if is_negation:
                 return (
-                    f"coalesce({field_as_timestamp_tz} {oper} {self._ph()}::timestamp, true)",
+                    f"coalesce({field_as_timestamp_tz} {oper} ({self._ph()})::timestamptz, true)",
                     (field, val.isoformat()),
                 )
             return (
-                f"({self.data_field} ? {self._ph()} AND {field_as_timestamp_tz} {oper} {self._ph()}::timestamp)",
+                f"({self.data_field} ? {self._ph()} AND {field_as_timestamp_tz} {oper} ({self._ph()})::timestamptz)",
                 (field, field, val.isoformat()),
             )
-        raise RuntimeError(f"unsupported value type {type(val).__name__}")
+        raise RuntimeError(
+            f"unsupported value type {type(val).__name__} for operation {oper}"
+        )
 
     def on_eq(self, field: str, p_eq: P.Eq) -> SimplifiedPredicate:
         query, params = self._smart_query(field, "=", p_eq.expect)
@@ -133,7 +146,15 @@ class PostgreSQLStorage:
     """Provides a storage interface for a postgresql database."""
 
     def __init__(
-        self, *, host: str, port: str, user: str, password: str, database: str, **pgopts
+        self,
+        *,
+        host: str,
+        port: str,
+        user: str,
+        password: str,
+        database: str,
+        plpython3u: bool = True,
+        **pgopts,
     ):
         """Initialize new PostgreSQL storage using the given connection."""
         self.__setup = RWLock()
@@ -142,6 +163,7 @@ class PostgreSQLStorage:
             f"?{'&'.join(f'{name}={value}' for name, value in pgopts.items())}"
         )
         self.__pool: Optional[aiopg.Pool] = None
+        self.__try_plpython3u = plpython3u
         self.__timestamp_convert: Optional[str] = None
 
     async def __get_pool(self) -> aiopg.Pool:
@@ -181,27 +203,28 @@ class PostgreSQLStorage:
                 """
             )
             await cur.execute("COMMIT;")
-            await cur.execute("BEGIN;")
-            try:
-                await cur.execute("CREATE EXTENSION IF NOT EXISTS plpython3u;")
-            except Exception as err:  # pylint: disable=broad-except
-                LOG.warning("plpython3u is unavailable: %s", err)
-            else:
-                await cur.execute(
-                    """
-                    CREATE OR REPLACE FUNCTION fromisoformat(raw text)
-                        RETURNS timestamp with time zone
-                    AS $$
-                        from datetime import datetime
-                        try:
-                            return datetime.fromisoformat(raw)
-                        except Exception:
-                            return None
-                    $$ LANGUAGE plpython3u;
-                    """
-                )
-                self.__timestamp_convert = r"fromisoformat({})"
-            await cur.execute("COMMIT;")
+            if self.__try_plpython3u:
+                await cur.execute("BEGIN;")
+                try:
+                    await cur.execute("CREATE EXTENSION IF NOT EXISTS plpython3u;")
+                except Exception as err:  # pylint: disable=broad-except
+                    LOG.warning("plpython3u is unavailable: %s", err)
+                else:
+                    await cur.execute(
+                        """
+                        CREATE OR REPLACE FUNCTION fromisoformat(raw text)
+                            RETURNS timestamp with time zone
+                        AS $$
+                            from datetime import datetime
+                            try:
+                                return datetime.fromisoformat(raw)
+                            except Exception:
+                                return None
+                        $$ LANGUAGE plpython3u;
+                        """
+                    )
+                    self.__timestamp_convert = r"fromisoformat({})"
+                await cur.execute("COMMIT;")
         except Exception:
             await cur.execute("ROLLBACK;")
             raise
@@ -239,7 +262,7 @@ class PostgreSQLStorage:
         """Load events that match the predicate."""
         async with self.get_transaction() as conn:
             events: List[EventBase] = []
-            sql_str = "SELECT event_type, event_data from __events"
+            sql_str = "SELECT event_type, event_data::text from __events"
             params = None
             if query:
                 query, where_clause, params = self.__simplify(
@@ -251,7 +274,7 @@ class PostgreSQLStorage:
             LOG.info("SQL QUERY: %s", sql_str)
             await conn.execute(sql_str, params)
             async for row in conn:
-                evt = EventMeta.construct_named(row[0], row[1])
+                evt = EventMeta.construct_named(row[0], JSON.loads(row[1]))
                 if query is None or query(evt):
                     events.append(evt)
             return events
@@ -289,7 +312,7 @@ class PostgreSQLStorage:
         """Load snapshots that match the predicate."""
         async with self.get_transaction() as conn:
             snaps: List[AggregateBase] = []
-            sql_str = "SELECT aggregate_type, aggregate_data from __snapshots"
+            sql_str = "SELECT aggregate_type, aggregate_data::text from __snapshots"
             params = None
             if query:
                 query, where_clause, params = self.__simplify(
@@ -301,7 +324,7 @@ class PostgreSQLStorage:
             LOG.info("SQL QUERY: %s", sql_str)
             await conn.execute(sql_str, params)
             async for row in conn:
-                snap = AggregateMeta.construct_named(row[0], row[1])
+                snap = AggregateMeta.construct_named(row[0], JSON.loads(row[1]))
                 if query is None or query(snap):
                     snaps.append(snap)
             return snaps

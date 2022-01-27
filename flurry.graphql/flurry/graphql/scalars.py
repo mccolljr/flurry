@@ -2,10 +2,10 @@
 
 from typing import Any, Dict, List, overload
 
-import json
 import graphene
 import graphql.language.ast as gqlast
 
+from flurry.util import JSON
 from flurry.core import predicate as P
 
 
@@ -15,13 +15,13 @@ class JSONScalar(graphene.Scalar):
     @staticmethod
     def serialize(value):
         """Serialize the value to a graphql string."""
-        return json.dumps(value)
+        return JSON.dumps(value)
 
     @staticmethod
     def parse_literal(ast: gqlast.Node):
         """Parse a value from a graphql literal."""
         if isinstance(ast, gqlast.StringValueNode):
-            return json.loads(ast.value)
+            return JSON.loads(ast.value)
         raise ValueError("invalid JSON")
 
 
@@ -85,7 +85,7 @@ class PredicateScalar(graphene.Scalar):
     @staticmethod
     def _serialize_field_pred_value(val: Any):
         if val is None or isinstance(val, (str, int, float, bool)):
-            return json.dumps(val)
+            return JSON.dumps(val)
         raise ValueError(f"cannot serialize field predicate value {val}")
 
     @staticmethod

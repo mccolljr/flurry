@@ -53,6 +53,24 @@
     ],
   )
 ---
+# name: test_postgresql_simplify[date_and_time]
+  <class 'tuple'> (
+    None,
+    '((data_field ? %s AND (data_field->>%s)::timestamptz = (%s)::timestamptz) AND (data_field ? %s AND (data_field->>%s)::timestamptz = (%s)::timestamptz) AND coalesce((data_field->>%s)::timestamptz <> (%s)::timestamptz, true) AND coalesce((data_field->>%s)::timestamptz <> (%s)::timestamptz, true))',
+    <class 'list'> [
+      'a',
+      'a',
+      '2022-01-27T13:06:47.799859+00:00',
+      'b',
+      'b',
+      '2022-01-27T13:06:47.799859-05:00',
+      'c',
+      '2022-01-27T13:06:47.799859+00:00',
+      'd',
+      '2022-01-27T13:06:47.799859-05:00',
+    ],
+  )
+---
 # name: test_postgresql_simplify[empty_and]
   <class 'tuple'> (
     <class 'And'> {
@@ -91,6 +109,18 @@
     },
     None,
     None,
+  )
+---
+# name: test_postgresql_simplify[null_where]
+  <class 'tuple'> (
+    None,
+    "(data_field->%s IS NULL OR data_field->%s = 'null' AND data_field ? %s AND data_field->%s != 'null')",
+    <class 'list'> [
+      'a',
+      'a',
+      'b',
+      'b',
+    ],
   )
 ---
 # name: test_postgresql_simplify[simple_and]

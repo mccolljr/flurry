@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "flurry-web"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 authors = ["Jacob McCollum <jacob.r.mccollum@gmail.com>"]
 readme = "README.md"
@@ -10,8 +10,8 @@ packages = [{ include = "flurry" }]
 python = "^3.10"
 aiohttp = "^3.8.1"
 stringcase = "^1.2.0"
-"flurry-util" = "^0.1.0"
-"flurry-core" = "^0.1.0"
+"flurry-util" = "^0.2.0"
+"flurry-core" = "^0.2.0"
 
 [tool.poetry.dev-dependencies]
 "flurry-util" = { path = "../flurry.util", develop = true }
